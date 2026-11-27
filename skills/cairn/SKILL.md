@@ -3,8 +3,8 @@ name: cairn
 description: >
   Search local coding-agent history across Claude Code, Qoder, Codex, pi/omp,
   DeepSeek Harness, OpenCode/ZCode, Cline, Grok Build, WorkBuddy, Droid, Kimi,
-  Devin, MiniMax, Hermes, Antigravity and LiveAgent, indexed in one read-only
-  SQLite database. Reactive when the user asks "how did I fix X",
+  Devin, MiniMax, Hermes, Antigravity, LiveAgent and DimAgent, indexed in one
+  read-only SQLite database. Reactive when the user asks "how did I fix X",
   "what did we decide", "find the session where", "上次怎么修的", "之前那个 session",
   "继续之前的", or references work you lack context for. Proactive when the user
   references past work, a file with complex edit history, a past failure, or asks
