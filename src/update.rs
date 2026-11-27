@@ -79,9 +79,7 @@ fn fetch_latest() -> Option<(String, String)> {
         .and_then(Value::as_str)?
         .trim_start_matches('v')
         .to_string();
-    if parse_version(&latest).is_none() {
-        return None;
-    }
+    parse_version(&latest)?;
     let url = value
         .get("html_url")
         .and_then(Value::as_str)
