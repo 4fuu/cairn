@@ -15,9 +15,10 @@ is uniform; the evidence is not. Read this before treating a row as fact.
 | `content_type = 'bash'` | A pi `!` shell execution. | Both the command and its output; no separate tool-call row. |
 | `content_type = 'summary'` | Provider compaction or branch summary. | Orientation only. It is derived from a longer conversation and can omit or misstate details. |
 
-A `tool_use` row has `is_meta = 0`, so it appears in normal search. A
-`tool_result` row has `is_meta = 1`, so normal search hides it; use
-`--include-meta` or SQL when the output is the evidence.
+Normal search selects `content_type = 'text'` and `is_meta = 0`. Thinking,
+tool-use, tool-result, bash, and summary rows are hidden; use `--include-meta`
+or SQL when one of those rows is the evidence. `tool_use` has `is_meta = 0` but
+is still excluded by the content-type filter.
 
 ## Ordering and time
 
@@ -86,7 +87,7 @@ Consequences:
   case.
 - `snippet` is a window around the first matched term. It can cut a word or a
   code block. Open the message before quoting.
-- Search excludes `is_meta = 1` unless `--include-meta` is passed.
+- Search excludes non-text content types and `is_meta = 1` unless `--include-meta` is passed.
 
 ## Truncation and missing data
 

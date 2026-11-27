@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --check
+      - run: cargo test --locked
+
+  skill:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify npx skills discovery and copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          cd "$work"
+          npx --yes skills add "$GITHUB_WORKSPACE" --skill cairn -a amp --copy -y
+          test -f .agents/skills/cairn/SKILL.md
+          test -f .agents/skills/cairn/references/schema.md
