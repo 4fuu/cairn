@@ -22,6 +22,19 @@ By default, only normal text messages are searched:
 
 Tool-call **arguments** are stored in `tool_calls.input_json` but are not part of the full-text index. A command such as `pytest tests/billing` is searchable only if the command or its output also appears in a message body. The same applies to file paths that exist only inside a tool input.
 
+## Filtering by row type
+
+`--type` and `--tool` select which stored rows are eligible, without changing the query text:
+
+```sh
+cairn search "callback" --type tool_result
+cairn search "timeout" --tool bash --all
+cairn show <session-id> --type thinking
+cairn show <session-id> --tool read
+```
+
+`--type` is repeatable. `tool` expands to both `tool_use` and `tool_result`. `--tool` matches the tool name case-insensitively and keeps both the call and its result. These filters imply the matching rows, so they do not require `--include-meta`; `--include-meta` remains the "all hidden rows" switch.
+
 ## English
 
 English works through both the trigram and word layers:

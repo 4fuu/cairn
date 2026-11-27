@@ -134,6 +134,18 @@ enum Command {
         full_text: bool,
         #[arg(long, help = "return message hits instead of grouping by session")]
         all: bool,
+        #[arg(
+            long = "type",
+            value_name = "TYPE",
+            help = "filter content type; repeatable (text, thinking, tool_use, tool_result, tool, bash, summary)"
+        )]
+        content_type: Vec<String>,
+        #[arg(
+            long = "tool",
+            value_name = "NAME",
+            help = "filter tool calls/results by tool name; repeatable"
+        )]
+        tool: Vec<String>,
     },
     Show {
         session: String,
@@ -147,6 +159,18 @@ enum Command {
         limit: usize,
         #[arg(long)]
         tools: bool,
+        #[arg(
+            long = "type",
+            value_name = "TYPE",
+            help = "filter content type; repeatable (text, thinking, tool_use, tool_result, tool, bash, summary)"
+        )]
+        content_type: Vec<String>,
+        #[arg(
+            long = "tool",
+            value_name = "NAME",
+            help = "filter tool calls/results by tool name; repeatable"
+        )]
+        tool: Vec<String>,
     },
     Sql {
         sql: String,
@@ -338,6 +362,8 @@ fn run() -> Result<()> {
             include_meta,
             full_text,
             all,
+            content_type,
+            tool,
         } => {
             let value = search::search(
                 &store,
@@ -353,6 +379,8 @@ fn run() -> Result<()> {
                     include_meta: *include_meta,
                     full_text: *full_text,
                     all: *all,
+                    content_types: content_type.clone(),
+                    tool_names: tool.clone(),
                 },
             )?;
             if cli.output_format() == OutputFormat::Json {
@@ -368,15 +396,21 @@ fn run() -> Result<()> {
             after,
             limit,
             tools,
+            content_type,
+            tool,
         } => {
             let value = query::show(
                 &store,
                 session,
-                around.as_deref(),
-                *before,
-                *after,
-                *limit,
-                *tools,
+                &query::ShowOptions {
+                    around: around.clone(),
+                    before: *before,
+                    after: *after,
+                    limit: *limit,
+                    tools: *tools,
+                    content_types: content_type.clone(),
+                    tool_names: tool.clone(),
+                },
             )?;
             if cli.output_format() == OutputFormat::Json {
                 print_json(&compact_show(&value, cli.detail, *tools))?;
@@ -593,6 +627,7 @@ fn compact_show(value: &Value, detail: bool, tools: bool) -> Value {
             let mut out = json!({
                 "seq": message["seq"],
                 "role": message["role"],
+                "content_type": message["content_type"],
                 "timestamp": message["timestamp"],
                 "text": message["text"],
             });

@@ -1,5 +1,5 @@
 use crate::store::Store;
-use crate::util::{normalize_ts_str, squeeze};
+use crate::util::{expand_content_types, normalize_ts_str, normalized_tool_names, squeeze};
 use anyhow::{Context, Result};
 use rusqlite::types::Value as SqlValue;
 use rusqlite::Connection;
@@ -15,6 +15,31 @@ pub struct SessionOptions {
     pub before: Option<String>,
     pub limit: usize,
     pub offset: usize,
+}
+
+#[derive(Clone, Debug)]
+pub struct ShowOptions {
+    pub around: Option<String>,
+    pub before: usize,
+    pub after: usize,
+    pub limit: usize,
+    pub tools: bool,
+    pub content_types: Vec<String>,
+    pub tool_names: Vec<String>,
+}
+
+impl Default for ShowOptions {
+    fn default() -> Self {
+        Self {
+            around: None,
+            before: 0,
+            after: 0,
+            limit: 200,
+            tools: false,
+            content_types: Vec::new(),
+            tool_names: Vec::new(),
+        }
+    }
 }
 
 pub fn overview(
@@ -222,24 +247,42 @@ fn session_json(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
     }))
 }
 
-pub fn show(
-    store: &Store,
-    session_id: &str,
-    around: Option<&str>,
-    before: usize,
-    after: usize,
-    limit: usize,
-    include_tools: bool,
-) -> Result<Value> {
+pub fn show(store: &Store, session_id: &str, options: &ShowOptions) -> Result<Value> {
     let conn = store.open_readonly()?;
     let session = find_session(&conn, session_id)?;
     let actual_id = session["id"].as_str().unwrap_or(session_id).to_string();
     let mut clauses = vec!["session_id = ?".to_string()];
     let mut params: Vec<SqlValue> = vec![SqlValue::Text(actual_id.clone())];
-    if !include_tools {
+
+    let content_types = expand_content_types(&options.content_types);
+    let tool_names = normalized_tool_names(&options.tool_names);
+    if !content_types.is_empty() {
+        let marks = vec!["?"; content_types.len()].join(", ");
+        clauses.push(format!("content_type IN ({marks})"));
+        for value in content_types {
+            params.push(SqlValue::Text(value));
+        }
+    } else if tool_names.is_empty() && !options.tools {
         clauses.push("is_meta = 0 AND content_type = 'text'".to_string());
     }
-    if let Some(around) = around {
+    if !tool_names.is_empty() {
+        let marks = vec!["?"; tool_names.len()].join(", ");
+        clauses.push(format!(
+            "(EXISTS (SELECT 1 FROM tool_calls tc
+                      WHERE tc.message_uuid = messages.uuid
+                        AND LOWER(tc.name) IN ({marks}))
+              OR EXISTS (SELECT 1 FROM tool_calls tc
+                         JOIN tool_results tr ON tr.tool_call_id = tc.id
+                         WHERE tr.message_uuid = messages.uuid
+                           AND LOWER(tc.name) IN ({marks})))"
+        ));
+        for _ in 0..2 {
+            for name in &tool_names {
+                params.push(SqlValue::Text(name.clone()));
+            }
+        }
+    }
+    if let Some(around) = options.around.as_deref() {
         let anchor: Option<i64> = conn
             .query_row(
                 "SELECT seq FROM messages WHERE session_id = ? AND uuid = ?",
@@ -251,10 +294,10 @@ pub fn show(
             anyhow::bail!("message {around:?} is not in session {actual_id}");
         };
         clauses.push("seq BETWEEN ? AND ?".to_string());
-        params.push(SqlValue::Integer(anchor - before as i64));
-        params.push(SqlValue::Integer(anchor + after as i64));
+        params.push(SqlValue::Integer(anchor - options.before as i64));
+        params.push(SqlValue::Integer(anchor + options.after as i64));
     }
-    let limit = limit.clamp(1, 1000);
+    let limit = options.limit.clamp(1, 1000);
     params.push(SqlValue::Integer(limit as i64));
     let sql = format!(
         "SELECT * FROM messages WHERE {} ORDER BY seq LIMIT ?",

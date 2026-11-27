@@ -49,8 +49,8 @@ row shape, read [pitfalls](references/pitfalls.md).
 |---|---|
 | `cairn overview --json` | Totals, projects, current project, recent sessions. |
 | `cairn sessions [--project P] [--source S] [--query Q] [--after D] [--before D] --json` | Locate a session by project, source, title, or time. |
-| `cairn search "text" [--project P] [--session ID] [--source S] [--context N] [--include-meta] [--all] --json` | Find evidence. Default groups by session; `--all` returns message hits; `--context` adds temporal neighbors. |
-| `cairn show <id> [--around UUID] [--before N] [--after N] [--tools] --json` | Read a message window or a session timeline. |
+| `cairn search "text" [--project P] [--session ID] [--source S] [--context N] [--include-meta] [--type TYPE] [--tool NAME] [--all] --json` | Find evidence. Default groups by session; `--all` returns message hits; `--context` adds temporal neighbors. |
+| `cairn show <id> [--around UUID] [--before N] [--after N] [--tools] [--type TYPE] [--tool NAME] --json` | Read a message window or a session timeline. |
 | `cairn sql "SELECT ..." [--param JSON] --json` | Read-only SQL for joins, counts, file history, failures, usage. |
 | `cairn status --json` | Index path, totals, per-source counts, freshness. |
 | `cairn sources --json` | Configured provider roots and whether they exist. |
@@ -58,7 +58,13 @@ row shape, read [pitfalls](references/pitfalls.md).
 | `cairn schema --json` | The real DDL, if the static schema reference is not enough. |
 
 Every command supports `--json`. Global options come before or after the
-subcommand: `--db PATH`, `--root SOURCE=PATH`, `--no-refresh`, `--json`.
+subcommand: `--db PATH`, `--root SOURCE=PATH`, `--no-refresh`, `--json`,
+`--format text|json`, `--detail`, `--no-update-check`.
+
+Use `--type` and `--tool` to target specific hidden rows without pulling all
+meta content: `--type thinking`, `--type tool` (both tool calls and results),
+`--type tool_result`, or `--tool read`. These filters imply the matching rows;
+`--include-meta` remains the "all hidden rows" switch.
 
 ## Sources
 

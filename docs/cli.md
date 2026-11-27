@@ -92,12 +92,16 @@ cairn search "迁移" --project my-app --context 3
 | `--limit N` | Default: 20, capped at 200 |
 | `--context N` | Add up to N neighboring messages to the best grouped hit |
 | `--include-meta` | Include thinking, tool results, and tool-use rows |
+| `--type TYPE` | Filter content type; repeatable (`text`, `thinking`, `tool_use`, `tool_result`, `tool`, `bash`, `summary`) |
+| `--tool NAME` | Filter tool calls/results by tool name; repeatable, case-insensitive |
 | `--full-text` | Return the complete matched message instead of only a snippet |
 | `--all` | Return message hits instead of grouping by session |
 
 The query is literal. It does not parse `OR`, `NEAR`, or FTS syntax. See [Search](search.md) for ranking and edge cases.
 
 By default, each grouped result includes the session ID, title, project, source, hit count, timestamp, best message UUID, and snippet. The UUID is deliberate: it lets an agent call `show --around <uuid>` without another search. `--detail` adds score, sequence, role, and content type. `--include-meta` changes which message types can match; `--detail` does not.
+
+`--type` and `--tool` are targeted filters. They imply the matching rows, so `--type thinking` works without `--include-meta`; `--type tool` means both `tool_use` and `tool_result`. Use `--tool read` to keep only calls/results for that tool.
 
 ## `cairn show`
 
@@ -115,8 +119,12 @@ cairn show <session-id> --around <uuid> --before 3 --after 3 --tools --json
 | `--after N` | Messages after the center |
 | `--limit N` | Default: 200 |
 | `--tools` | Include tool calls/results and meta messages |
+| `--type TYPE` | Filter content type; repeatable (`text`, `thinking`, `tool_use`, `tool_result`, `tool`, `bash`, `summary`) |
+| `--tool NAME` | Filter tool calls/results by tool name; repeatable, case-insensitive |
 
-Without `--around`, `show` returns the visible text timeline in order. By default, messages contain sequence, role, timestamp, and text. `--tools` adds tool-use/tool-result rows and their payloads; `--detail` adds UUID, content type, model, token counts, and the meta flag. `--detail` does not add tool rows by itself.
+Without `--around`, `show` returns the visible text timeline in order. By default, messages contain sequence, role, content type, timestamp, and text. `--tools` adds tool-use/tool-result rows and their payloads; `--detail` adds UUID, model, token counts, and the meta flag. `--detail` does not add tool rows by itself.
+
+`--type` and `--tool` select rows directly. For example, `show <id> --type thinking` reads only thinking, `show <id> --type tool` reads calls and results, and `show <id> --tool read` keeps only the `read` tool's calls/results.
 
 ## `cairn sql`
 

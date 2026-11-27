@@ -18,6 +18,7 @@ Cairn is a Rust CLI plus an agent skill. It reads local coding-agent transcripts
 - Search has three layers: trigram, jieba words, and `LIKE` fallback. Preserve all three when changing search.
 - Default search covers `content_type = 'text'` and `is_meta = 0`. `--include-meta` is the explicit escape hatch for thinking, tool results, and tool-use rows.
 - Keep default output actionable but bounded: grouped search includes the best message UUID so `show --around` needs no extra search; `show` returns visible text; `--detail` adds nonessential fields, and `--include-meta`/`--tools` add rows.
+- `--type` and `--tool` are targeted row filters. They imply the matching hidden rows and must stay independent from `--detail`, which only adds fields.
 - `cairn sql` must stay read-only: one `SELECT`/`WITH`, authorizer, deadline, row cap.
 - Update checks are cached for 24 hours and write only to the state file; never block or corrupt JSON output.
 - The skill is installed by `npx skills` from `skills/cairn-session-search/`. Do not add a `cairn install` command or per-agent install paths.

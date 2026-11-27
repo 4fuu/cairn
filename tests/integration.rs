@@ -1,6 +1,6 @@
 use cairn::indexer::build;
 use cairn::providers::{Format, Root};
-use cairn::query::{show, SessionOptions};
+use cairn::query::{show, SessionOptions, ShowOptions};
 use cairn::search::{search, SearchOptions};
 use cairn::sqlguard;
 use cairn::store::Store;
@@ -105,9 +105,17 @@ fn search_scope_and_meta() {
 #[test]
 fn show_default_and_tools() {
     let fixture = fixture();
-    let plain = show(&fixture.store, "claude-demo-1", None, 0, 0, 200, false).unwrap();
+    let plain = show(&fixture.store, "claude-demo-1", &ShowOptions::default()).unwrap();
     assert_eq!(plain["count"], 3);
-    let tools = show(&fixture.store, "claude-demo-1", None, 0, 0, 200, true).unwrap();
+    let tools = show(
+        &fixture.store,
+        "claude-demo-1",
+        &ShowOptions {
+            tools: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
     assert_eq!(tools["count"], 6);
     let call = tools["messages"]
         .as_array()
@@ -116,6 +124,99 @@ fn show_default_and_tools() {
         .find(|message| message["content_type"] == "tool_use")
         .unwrap();
     assert_eq!(call["tool_call"]["name"], "Read");
+
+    let thinking = show(
+        &fixture.store,
+        "claude-demo-1",
+        &ShowOptions {
+            content_types: vec!["thinking".into()],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(thinking["count"], 1);
+    assert_eq!(thinking["messages"][0]["content_type"], "thinking");
+
+    let calls = show(
+        &fixture.store,
+        "claude-demo-1",
+        &ShowOptions {
+            content_types: vec!["tool_use".into()],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(calls["count"], 1);
+
+    let results = show(
+        &fixture.store,
+        "claude-demo-1",
+        &ShowOptions {
+            content_types: vec!["tool_result".into()],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(results["count"], 1);
+
+    let both_tools = show(
+        &fixture.store,
+        "claude-demo-1",
+        &ShowOptions {
+            content_types: vec!["tool".into()],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(both_tools["count"], 2);
+
+    let read = show(
+        &fixture.store,
+        "claude-demo-1",
+        &ShowOptions {
+            tool_names: vec!["read".into()],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(read["count"], 2);
+}
+
+#[test]
+fn search_filters_content_and_tools() {
+    let fixture = fixture();
+    let thinking = search(
+        &fixture.store,
+        "redirect loop",
+        &SearchOptions {
+            content_types: vec!["thinking".into()],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(thinking["count"], 1);
+
+    let result = search(
+        &fixture.store,
+        "callback",
+        &SearchOptions {
+            content_types: vec!["tool_result".into()],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(result["count"], 1);
+
+    let by_tool = search(
+        &fixture.store,
+        "callback",
+        &SearchOptions {
+            tool_names: vec!["read".into()],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(by_tool["count"], 1);
 }
 
 #[test]
@@ -355,7 +456,15 @@ fn indexes_dimagent_sqlite() {
     assert_eq!(hits["count"], 1);
     assert_eq!(hits["sessions"][0]["session_id"], "dimagent:sess_demo");
 
-    let shown = show(&store, "dimagent:sess_demo", None, 0, 0, 200, true).unwrap();
+    let shown = show(
+        &store,
+        "dimagent:sess_demo",
+        &ShowOptions {
+            tools: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
     assert_eq!(shown["count"], 5);
     let messages = shown["messages"].as_array().unwrap();
     assert!(messages.iter().any(|message| {

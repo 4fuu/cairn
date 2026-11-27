@@ -246,6 +246,37 @@ pub fn get_i64(value: &Value, path: &[&str]) -> Option<i64> {
     current.as_i64()
 }
 
+pub fn expand_content_types(values: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    for value in values {
+        let value = value.trim().to_ascii_lowercase();
+        if value.is_empty() {
+            continue;
+        }
+        if value == "tool" || value == "tools" {
+            for item in ["tool_use", "tool_result"] {
+                if !out.iter().any(|existing| existing == item) {
+                    out.push(item.to_string());
+                }
+            }
+        } else if !out.iter().any(|existing| existing == &value) {
+            out.push(value);
+        }
+    }
+    out
+}
+
+pub fn normalized_tool_names(values: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    for value in values {
+        let value = value.trim().to_ascii_lowercase();
+        if !value.is_empty() && !out.contains(&value) {
+            out.push(value);
+        }
+    }
+    out
+}
+
 pub fn get_value<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
     let mut current = value;
     for key in path {

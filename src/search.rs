@@ -1,6 +1,6 @@
 use crate::store;
 use crate::store::Store;
-use crate::util::{normalize_ts_str, snippet};
+use crate::util::{expand_content_types, normalize_ts_str, normalized_tool_names, snippet};
 use anyhow::{Context, Result};
 use rusqlite::types::Value as SqlValue;
 use rusqlite::Connection;
@@ -19,6 +19,8 @@ pub struct SearchOptions {
     pub include_meta: bool,
     pub full_text: bool,
     pub all: bool,
+    pub content_types: Vec<String>,
+    pub tool_names: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -368,8 +370,33 @@ fn filters(options: &SearchOptions) -> Result<(Vec<String>, Vec<SqlValue>)> {
         clauses.push("m.timestamp <= ?".to_string());
         params.push(SqlValue::Text(stamp));
     }
-    if !options.include_meta {
+    let content_types = expand_content_types(&options.content_types);
+    let tool_names = normalized_tool_names(&options.tool_names);
+    if !content_types.is_empty() {
+        let marks = vec!["?"; content_types.len()].join(", ");
+        clauses.push(format!("m.content_type IN ({marks})"));
+        for value in content_types {
+            params.push(SqlValue::Text(value));
+        }
+    } else if tool_names.is_empty() && !options.include_meta {
         clauses.push("m.is_meta = 0 AND m.content_type = 'text'".to_string());
+    }
+    if !tool_names.is_empty() {
+        let marks = vec!["?"; tool_names.len()].join(", ");
+        clauses.push(format!(
+            "(EXISTS (SELECT 1 FROM tool_calls tc
+                      WHERE tc.message_uuid = m.uuid
+                        AND LOWER(tc.name) IN ({marks}))
+              OR EXISTS (SELECT 1 FROM tool_calls tc
+                         JOIN tool_results tr ON tr.tool_call_id = tc.id
+                         WHERE tr.message_uuid = m.uuid
+                           AND LOWER(tc.name) IN ({marks})))"
+        ));
+        for _ in 0..2 {
+            for name in &tool_names {
+                params.push(SqlValue::Text(name.clone()));
+            }
+        }
     }
     Ok((clauses, params))
 }
