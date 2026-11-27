@@ -1,13 +1,13 @@
 class Cairn < Formula
   desc "Local, read-only index of coding-agent sessions"
   homepage "https://github.com/4fuu/cairn"
-  version "2026.1127.1"
+  version "2026.1127.2"
   license "MIT"
   depends_on arch: :arm64
 
   on_macos do
-    url "https://github.com/4fuu/cairn/releases/download/v2026.1127.1/cairn-2026.1127.1-aarch64-apple-darwin.tar.gz"
-    sha256 "999552c34c66204e7c7725b899b93d343f51cce602401dbea8103c3943da9f2d"
+    url "https://github.com/4fuu/cairn/releases/download/v2026.1127.2/cairn-2026.1127.2-aarch64-apple-darwin.tar.gz"
+    sha256 "02040bffad960d1daff488092f138b8468d4c6343a79c96a8d7d05fe4195298d"
   end
 
   def install
