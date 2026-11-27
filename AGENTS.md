@@ -67,6 +67,31 @@ Follow the checklist in [docs/development.md](docs/development.md#add-a-provider
 4. Update `docs/sources.md` and the source list in `skills/cairn-session-search/SKILL.md`.
 5. Run `cargo test --locked` and `npx skills add . --list`.
 
+## When behavior changes
+
+A behavior change is not complete until every user-facing description matches it. Update code, tests, docs, and skill text in the same change; do not leave documentation for a follow-up.
+
+Before editing, identify the old wording and all places that describe the behavior:
+
+```sh
+rg -n -- '--old-flag|cairn old-command|old/path|old default' README.md AGENTS.md docs skills
+```
+
+Check at least:
+
+- README: install/skill commands, quick start, capability summary, performance claims.
+- `docs/cli.md`: commands, flags, defaults, and output shapes.
+- `docs/search.md`: search, filter, and hidden-row semantics.
+- `docs/install.md`: install, upgrade, update-check, and uninstall behavior.
+- `docs/sources.md`: provider coverage and root resolution.
+- `docs/architecture.md`: data flow, schema, SQL guard, and update state.
+- `docs/development.md`: test matrix and provider checklist.
+- `docs/release.md` and `docs/releases/`: release process and the current release note.
+- `skills/cairn-session-search/SKILL.md` and `references/`: agent-facing commands, filters, and evidence rules.
+- `AGENTS.md`: invariants and change map when the rule itself changes.
+
+After editing, verify relative links, run `cargo test --locked`, and run `npx skills add . --list`. If a behavior changed after a release, publish a new revision; do not rewrite historical release notes.
+
 ## Documentation ownership
 
 - README: identity, first-run path, critical boundaries.
@@ -77,4 +102,4 @@ Follow the checklist in [docs/development.md](docs/development.md#add-a-provider
 - `docs/release.md`: versioning and release checklist.
 - `skills/cairn-session-search/`: runtime instructions for the agent.
 
-Update the owning document when behavior changes; do not duplicate the same detail in several places.
+The owning document holds the full detail; other documents keep only a summary and link. Do not duplicate mutable behavior in several places.
