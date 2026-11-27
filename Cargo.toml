@@ -1,6 +1,6 @@
 [package]
 name = "cairn"
-version = "2026.1127.0"
+version = "2026.1127.1"
 edition = "2021"
 rust-version = "1.89"
 description = "A local, read-only index of coding-agent sessions, queried through a CLI and a skill."

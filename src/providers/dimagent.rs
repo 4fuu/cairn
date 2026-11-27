@@ -83,7 +83,8 @@ fn parse_session(
          FROM messages WHERE sessionId = ?1 ORDER BY orderKey",
     )?;
     let mut rows = stmt.query([&row.id])?;
-    let mut last_assistant: Option<String> = None;
+    let mut last_assistant_text: Option<String> = None;
+    let mut last_assistant_any: Option<String> = None;
     while let Some(message) = rows.next()? {
         let message_id: String = message.get(0)?;
         let role: String = message.get(1)?;
@@ -124,7 +125,8 @@ fn parse_session(
                         None,
                     );
                     if role == "assistant" {
-                        last_assistant = Some(uuid);
+                        last_assistant_text = Some(uuid.clone());
+                        last_assistant_any = Some(uuid);
                     }
                 }
                 "thinking" => {
@@ -164,7 +166,7 @@ fn parse_session(
                         false,
                         None,
                     );
-                    last_assistant = Some(uuid);
+                    last_assistant_any = Some(uuid);
                 }
                 "tool_result" => {
                     let Some(call_id) = get_str(part, &["tool_use_id"]) else {
@@ -192,8 +194,8 @@ fn parse_session(
         }
     }
 
-    if let Some(uuid) = last_assistant.as_deref() {
-        builder.set_last_usage(uuid, session_usage(conn, &row.id));
+    if let Some(uuid) = last_assistant_text.or(last_assistant_any) {
+        builder.set_last_usage(&uuid, session_usage(conn, &row.id));
     }
     Ok(builder.finish())
 }
@@ -215,10 +217,42 @@ fn session_model(conn: &Connection, session_id: &str) -> Option<String> {
 }
 
 fn session_usage(conn: &Connection, session_id: &str) -> Usage {
+    if table_exists(conn, "usage_run_stats").unwrap_or(false) {
+        if let Ok(mut stmt) = conn.prepare(
+            "SELECT inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens
+             FROM usage_run_stats WHERE sessionId = ?1",
+        ) {
+            if let Ok(rows) = stmt.query_map([session_id], |row| {
+                Ok((
+                    row.get::<_, Option<i64>>(0)?.unwrap_or(0),
+                    row.get::<_, Option<i64>>(1)?.unwrap_or(0),
+                    row.get::<_, Option<i64>>(2)?.unwrap_or(0),
+                    row.get::<_, Option<i64>>(3)?.unwrap_or(0),
+                ))
+            }) {
+                let mut usage = Usage::default();
+                let mut found = false;
+                for (input, output, cache_read, cache_write) in rows.flatten() {
+                    usage.input = Some(usage.input.unwrap_or(0) + input);
+                    usage.output = Some(usage.output.unwrap_or(0) + output);
+                    usage.cache_read = Some(usage.cache_read.unwrap_or(0) + cache_read);
+                    usage.cache_write = Some(usage.cache_write.unwrap_or(0) + cache_write);
+                    found = true;
+                }
+                if found {
+                    return usage;
+                }
+            }
+        }
+    }
+
     if !table_exists(conn, "usage_ledger").unwrap_or(false) {
         return Usage::default();
     }
-    let Ok(mut stmt) = conn.prepare("SELECT usage FROM usage_ledger WHERE sessionId = ?1") else {
+    let Ok(mut stmt) = conn.prepare(
+        "SELECT usage FROM usage_ledger
+         WHERE sessionId = ?1 AND ledgerId LIKE 'usage_run_%'",
+    ) else {
         return Usage::default();
     };
     let Ok(rows) = stmt.query_map([session_id], |row| row.get::<_, String>(0)) else {

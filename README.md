@@ -16,7 +16,7 @@ The original transcripts are never modified.
 
 ## Install
 
-The current release is `2026.1127.0`. Versions use the calendar form
+The current release is `2026.1127.1`. Versions use the calendar form
 `YYYY.MDD.REVISION` in `Asia/Hong_Kong`, matching the release scheme used by
 URI Agent.
 

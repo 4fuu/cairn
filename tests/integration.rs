@@ -261,6 +261,14 @@ fn indexes_dimagent_sqlite() {
             cost REAL,
             createdAt TEXT NOT NULL
         );
+        CREATE TABLE usage_run_stats (
+            runId TEXT PRIMARY KEY,
+            sessionId TEXT NOT NULL,
+            inputTokens INTEGER NOT NULL,
+            outputTokens INTEGER NOT NULL,
+            cacheReadTokens INTEGER,
+            cacheWriteTokens INTEGER
+        );
         "#,
     )
     .unwrap();
@@ -292,6 +300,13 @@ fn indexes_dimagent_sqlite() {
             r#"{"promptTokens":10,"completionTokens":4,"cacheReadTokens":2}"#,
             "2026-11-27T10:01:00.000Z"
         ],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO usage_run_stats
+         (runId, sessionId, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens)
+         VALUES ('run_1', 'sess_demo', 10, 4, 2, 0)",
+        [],
     )
     .unwrap();
     let messages = [
@@ -352,6 +367,13 @@ fn indexes_dimagent_sqlite() {
     assert!(messages
         .iter()
         .any(|message| message["content_type"] == "thinking"));
+    let assistant = messages
+        .iter()
+        .find(|message| message["content_type"] == "text" && message["role"] == "assistant")
+        .unwrap();
+    assert_eq!(assistant["input_tokens"], 10);
+    assert_eq!(assistant["output_tokens"], 4);
+    assert_eq!(assistant["cache_read_tokens"], 2);
 
     let sessions = cairn::query::sessions(
         &store,
