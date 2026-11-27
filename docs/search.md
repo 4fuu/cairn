@@ -18,7 +18,7 @@ By default, only normal text messages are searched:
 - `content_type = 'text'`
 - `is_meta = 0`
 
-`--include-meta` removes those filters and includes thinking, tool results, and tool-use rows. Use it when the evidence is a command output, a stack trace, or a tool call.
+`--include-meta` removes those filters and includes thinking, tool results, and tool-use rows. Use it when you need all hidden rows; use `--type` or `--tool` when you need one kind of row.
 
 Tool-call **arguments** are stored in `tool_calls.input_json` but are not part of the full-text index. A command such as `pytest tests/billing` is searchable only if the command or its output also appears in a message body. The same applies to file paths that exist only inside a tool input.
 

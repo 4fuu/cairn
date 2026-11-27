@@ -64,6 +64,7 @@ Search has three layers and different ranking paths. A change should be tested w
 - Chinese two-character and longer phrases
 - code identifiers and paths
 - `--include-meta` versus default text-only search
+- `--type` and `--tool` filters, including comma-separated and repeated values
 - session grouping versus `--all`
 
 Add cases to `tests/integration.rs` rather than creating a parallel test harness.

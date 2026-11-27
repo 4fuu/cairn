@@ -16,7 +16,7 @@
 
 Global options work before or after the subcommand.
 
-Default output is intentionally bounded. Search returns the best hit plus a session ID and message UUID; `show` returns visible text; tool output and thinking require `--include-meta` or `--tools`. `--detail` adds the nonessential fields without changing which rows are selected.
+Default output is intentionally bounded. Search returns the best hit plus a session ID and message UUID; `show` returns visible text; tool output and thinking require `--include-meta`, `--tools`, or a targeted `--type`/`--tool` filter. `--detail` adds the nonessential fields without changing which rows are selected.
 
 ## `cairn version`
 

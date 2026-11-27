@@ -204,11 +204,14 @@ Token counts exist only where the provider records them. Missing values are
 ## 9. Search only tool output
 
 ```bash
+cairn search "connection refused" --type tool_result --limit 10 --json
+cairn search "connection refused" --tool bash --limit 10 --json
 cairn search "connection refused" --include-meta --limit 10 --json
 ```
 
-This includes thinking, tool results, and summaries because they have
-`is_meta = 1`. For exact SQL:
+`--type tool_result` selects only tool output; `--tool bash` selects the calls
+and results for that tool. `--include-meta` is the broad switch that includes
+thinking, tool results, and summaries because they have `is_meta = 1`. For exact SQL:
 
 ```bash
 cairn sql "SELECT m.session_id, m.uuid, m.content_type,

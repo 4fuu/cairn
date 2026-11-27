@@ -20,7 +20,7 @@ cairn --root codex=/path/to/sessions build
 
 ## Search returns nothing
 
-- Default search covers normal text only. Add `--include-meta` for thinking, tool results, and tool-use rows.
+- Default search covers normal text only. Add `--type`/`--tool` for a targeted hidden row, or `--include-meta` for all thinking, tool results, and tool-use rows.
 - Tool-call arguments are not full-text indexed. A command that appears only in `tool_calls.input_json` will not match.
 - One- and two-character queries use `LIKE`; try a three-character substring.
 - Search is literal. Try a shorter identifier or a phrase that actually appears in the transcript.

@@ -46,7 +46,7 @@ cairn build --full --json
 - The index may be empty (`sessions: 0`).
 - The phrase may be 1–2 characters and hidden inside a larger CJK token; the
   LIKE fallback should still find it, but try a 3+ character phrase.
-- The evidence may be only in tool output; add `--include-meta`.
+- The evidence may be only in tool output or thinking; add `--type`/`--tool` for a targeted row, or `--include-meta` for all hidden rows.
 - The session may be in a different project; drop `--project`.
 
 ## `messages.text` is `NULL`

@@ -25,8 +25,8 @@ database. There is no daemon and no desktop app.
    result groups by session: each entry in `sessions[]` is the best hit, with a
    `hits` count and a `snippet`; pass `--all` when you need every matching
    message. Search the narrowest scope first: project, session, source, or time
-   range. Use `--include-meta` only when tool output, tool calls, or thinking is
-   the evidence you need.
+   range. Use `--type`/`--tool` to target one kind of hidden row, or
+   `--include-meta` when you need all hidden rows.
 3. **Expand** the strongest hits with `cairn show <session-id> --around <uuid>
    --before 3 --after 3 --tools --json`. Read a window, not a whole session.
    `show` without `--around` returns the session's visible text in order.
