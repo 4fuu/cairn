@@ -70,7 +70,7 @@ Cairn discovers each agent's own session files. Use `cairn sources --json` to
 see which roots exist on this machine. The `source` field in every result is one
 of: `claude`, `qoder`, `qoder-cn`, `codex`, `pi`, `omp`, `raft`, `cindy`, `dsh`, `cline`, `grok`,
 `droid`, `kimi`, `workbuddy`, `workbuddy-ai`, `codebuddy`, `opencode`, `zcode`,
-`hermes`, `agy`, `antigravity`, `devin`, `minimax`, `liveagent`.
+`hermes`, `agy`, `antigravity`, `devin`, `minimax`, `liveagent`, `dimagent`.
 
 If a provider lives somewhere else, pass `--root source=/path` (repeatable) or
 set the provider's own environment variable before indexing. `--source` filters

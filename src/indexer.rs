@@ -114,7 +114,10 @@ pub fn build(
                 }
             };
             let append = !full
-                && !matches!(file.format, Format::OpenCode | Format::Hermes)
+                && !matches!(
+                    file.format,
+                    Format::OpenCode | Format::Hermes | Format::DimAgent
+                )
                 && existing
                     .get(&path.to_string_lossy().to_string())
                     .map(|(_, old_size, old_hash)| {

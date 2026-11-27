@@ -1,0 +1,180 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Validate release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(cargo metadata --locked --no-deps --format-version 1 |
+            jq -r '.packages[] | select(.name == "cairn") | .version')
+          [[ "$version" =~ ^[0-9]{4}\.[0-9]{3,4}\.[0-9]+$ ]] || {
+            echo "Version must use YYYY.MDD.REVISION" >&2
+            exit 1
+          }
+          expected=$(TZ=Asia/Hong_Kong date '+%Y.%-m%d')
+          [[ "$version" == "$expected".* ]] || {
+            echo "Version $version does not match today's Asia/Hong_Kong date $expected" >&2
+            exit 1
+          }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --check
+      - run: cargo test --locked
+
+  build:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            format: tar
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            format: tar
+          - runner: macos-26
+            target: aarch64-apple-darwin
+            format: tar
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+            format: zip
+    runs-on: ${{ matrix.runner }}
+    env:
+      TARGET: ${{ matrix.target }}
+      VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - name: Build
+        shell: bash
+        run: cargo build --locked --release --target "$TARGET"
+      - name: Stage Unix archive
+        if: matrix.format == 'tar'
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/stage"
+          mkdir -p "$stage"
+          cp "target/$TARGET/release/cairn" LICENSE README.md "$stage/"
+          "$stage/cairn" --version
+          tar -czf "cairn-$VERSION-$TARGET.tar.gz" -C "$stage" .
+      - name: Stage Windows archive
+        if: matrix.format == 'zip'
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP "stage"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "target/$env:TARGET/release/cairn.exe", "LICENSE", "README.md" -Destination $stage
+          & "$stage/cairn.exe" --version
+          Compress-Archive -Path "$stage/*" -DestinationPath "cairn-$env:VERSION-$env:TARGET.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cairn-${{ matrix.target }}
+          path: cairn-${{ needs.validate.outputs.version }}-${{ matrix.target }}.*
+          if-no-files-found: error
+
+  release:
+    needs: [validate, verify, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Generate checksums and package metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_sha=$GITHUB_SHA
+          git fetch origin main
+          actual_sha=$(git rev-parse origin/main)
+          [[ "$actual_sha" == "$expected_sha" ]] || {
+            echo "main moved from $expected_sha to $actual_sha during the release" >&2
+            exit 1
+          }
+          (cd release && sha256sum cairn-* > SHA256SUMS)
+          python3 scripts/update-package-metadata.py "$VERSION" release/SHA256SUMS
+          jq --exit-status . bucket/cairn.json >/dev/null
+      - name: Commit package metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/cairn.rb bucket/cairn.json
+          if ! git diff --cached --quiet; then
+            git commit -m "release: update package metadata for v$VERSION"
+            git push origin HEAD:main
+          fi
+          echo "release_sha=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - name: Create GitHub release
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" release/* --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$tag" release/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$release_sha" \
+              --title "Cairn $VERSION" \
+              --generate-notes
+          fi
+
+  smoke:
+    needs: [validate, release]
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install from the published release
+        shell: bash
+        run: |
+          set -euo pipefail
+          CAIRN_INSTALL_DIR="$RUNNER_TEMP/bin" sh scripts/install.sh "$VERSION"
+          "$RUNNER_TEMP/bin/cairn" --version | grep -F "cairn $VERSION"

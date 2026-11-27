@@ -16,7 +16,33 @@ The original transcripts are never modified.
 
 ## Install
 
-From GitHub:
+The current release is `2026.1127.0`. Versions use the calendar form
+`YYYY.MDD.REVISION` in `Asia/Hong_Kong`, matching the release scheme used by
+URI Agent.
+
+### One-line installer
+
+Linux (x86-64 / ARM64) and Apple Silicon macOS:
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://raw.githubusercontent.com/4fuu/cairn/main/scripts/install.sh | sh
+```
+
+### Homebrew (Apple Silicon macOS)
+
+```sh
+brew tap 4fuu/cairn https://github.com/4fuu/cairn
+brew install 4fuu/cairn/cairn
+```
+
+### Scoop (64-bit Windows)
+
+```powershell
+scoop bucket add cairn https://github.com/4fuu/cairn
+scoop install cairn
+```
+
+### Cargo
 
 ```sh
 cargo install --git https://github.com/4fuu/cairn
@@ -29,6 +55,12 @@ Or from a local checkout:
 git clone https://github.com/4fuu/cairn
 cd cairn
 cargo install --path .
+```
+
+Then install the bundled skill for your agent:
+
+```sh
+cairn install --agent amp   # or claude, pi, codex
 ```
 
 For development:
@@ -83,6 +115,7 @@ Cairn follows the session locations used by the agents themselves (and by
 | Devin CLI | `~/.local/share/devin/cli/sessions` | `log.jsonl` |
 | MiniMax Code | `~/.minimax/v2/sessions` (`$MINIMAX_DATA_DIR`) | JSONL |
 | LiveAgent | `~/.liveagent/sessions` | `session.jsonl` |
+| DimAgent | `~/.dim/v2/dimcode.sqlite` (`$DIMCODE_HOME`) | SQLite |
 
 Override any root per invocation:
 

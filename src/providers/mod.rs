@@ -4,6 +4,7 @@ pub mod claude;
 pub mod cline;
 pub mod codex;
 pub mod devin;
+pub mod dimagent;
 pub mod droid;
 pub mod dsh;
 pub mod grok;
@@ -37,6 +38,7 @@ pub enum Format {
     Devin,
     MiniMax,
     LiveAgent,
+    DimAgent,
 }
 
 #[derive(Clone, Debug)]
@@ -70,6 +72,7 @@ pub fn source_format(source: &str) -> Option<Format> {
         "devin" => Format::Devin,
         "minimax" => Format::MiniMax,
         "liveagent" => Format::LiveAgent,
+        "dimagent" => Format::DimAgent,
         _ => return None,
     })
 }
@@ -82,6 +85,8 @@ pub fn source_names() -> &'static [&'static str] {
         "codex",
         "pi",
         "omp",
+        "raft",
+        "cindy",
         "dsh",
         "cline",
         "grok",
@@ -98,6 +103,7 @@ pub fn source_names() -> &'static [&'static str] {
         "devin",
         "minimax",
         "liveagent",
+        "dimagent",
     ]
 }
 
@@ -256,6 +262,9 @@ pub fn default_roots() -> Vec<Root> {
     });
     roots.push(root("liveagent", liveagent_base.join("sessions")));
 
+    let dimagent_base = env_path("DIMCODE_HOME", || home.join(".dim"));
+    roots.push(root("dimagent", dimagent_base.join("v2")));
+
     roots
 }
 
@@ -308,6 +317,7 @@ pub fn discover(roots: &[Root], sources: Option<&[String]>) -> Vec<SourceFile> {
             Format::Devin => devin::discover(&root.path),
             Format::MiniMax => minimax::discover(&root.path),
             Format::LiveAgent => liveagent::discover(&root.path),
+            Format::DimAgent => dimagent::discover(&root.path),
         };
         for path in paths {
             let Ok(path) = path.canonicalize() else {
@@ -344,6 +354,7 @@ pub fn parse_file(file: &SourceFile) -> Result<Vec<ParsedSession>> {
         Format::Devin => devin::parse(&file.path),
         Format::MiniMax => minimax::parse(&file.path),
         Format::LiveAgent => liveagent::parse(&file.path),
+        Format::DimAgent => dimagent::parse(&file.path, &file.source),
     }
 }
 

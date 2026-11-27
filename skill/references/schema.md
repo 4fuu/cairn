@@ -17,7 +17,7 @@ pi session file).
 | Column | Meaning |
 |---|---|
 | `id` | Cairn session ID. Claude keeps its UUID; Codex and pi are prefixed (`codex:...`, `pi:...`). A `#<hash>` suffix appears when two files claim the same ID. |
-| `source` | Provider ID: `claude`, `qoder`, `qoder-cn`, `codex`, `pi`, `omp`, `raft`, `cindy`, `dsh`, `cline`, `grok`, `droid`, `kimi`, `workbuddy`, `workbuddy-ai`, `codebuddy`, `opencode`, `zcode`, `hermes`, `agy`, `antigravity`, `devin`, `minimax`, or `liveagent`. |
+| `source` | Provider ID: `claude`, `qoder`, `qoder-cn`, `codex`, `pi`, `omp`, `raft`, `cindy`, `dsh`, `cline`, `grok`, `droid`, `kimi`, `workbuddy`, `workbuddy-ai`, `codebuddy`, `opencode`, `zcode`, `hermes`, `agy`, `antigravity`, `devin`, `minimax`, `liveagent`, or `dimagent`. |
 | `title` | Provider title, explicit title, or the first real user prompt. |
 | `project` | Basename of the session's working directory. |
 | `project_path` | Full working directory. |

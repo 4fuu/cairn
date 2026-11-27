@@ -4,6 +4,7 @@ use cairn::query::{show, SessionOptions};
 use cairn::search::{search, SearchOptions};
 use cairn::sqlguard;
 use cairn::store::Store;
+use rusqlite::{params, Connection};
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
@@ -207,6 +208,161 @@ fn append_update_is_incremental() {
     assert_eq!(hits["count"], 1);
     let stats = store.stats().unwrap();
     assert_eq!(stats["sessions"], 1);
+}
+
+#[test]
+fn indexes_dimagent_sqlite() {
+    let tmp = tempfile::tempdir().unwrap();
+    let db = tmp.path().join("dimcode.sqlite");
+    let conn = Connection::open(&db).unwrap();
+    conn.execute_batch(
+        r#"
+        CREATE TABLE sessions (
+            sessionId TEXT PRIMARY KEY,
+            cwd TEXT NOT NULL DEFAULT '',
+            title TEXT,
+            status TEXT NOT NULL,
+            tags TEXT,
+            heldBy TEXT,
+            heldAt TEXT,
+            createdAt TEXT NOT NULL,
+            updatedAt TEXT NOT NULL,
+            version INTEGER NOT NULL
+        );
+        CREATE TABLE messages (
+            messageId TEXT PRIMARY KEY,
+            sessionId TEXT NOT NULL,
+            role TEXT NOT NULL,
+            parts TEXT NOT NULL,
+            attachments TEXT,
+            toolMetadata TEXT,
+            metadata TEXT,
+            orderKey TEXT NOT NULL,
+            createdAt TEXT NOT NULL,
+            updatedAt TEXT NOT NULL
+        );
+        CREATE TABLE session_states (
+            sessionId TEXT PRIMARY KEY,
+            selectedProviderId TEXT,
+            selectedModelId TEXT,
+            insertionCursor TEXT,
+            settings TEXT,
+            permissionSettings TEXT,
+            currentMode TEXT,
+            version INTEGER NOT NULL
+        );
+        CREATE TABLE usage_ledger (
+            ledgerId TEXT PRIMARY KEY,
+            sessionId TEXT NOT NULL,
+            runId TEXT,
+            providerId TEXT NOT NULL,
+            modelId TEXT NOT NULL,
+            usage TEXT NOT NULL,
+            cost REAL,
+            createdAt TEXT NOT NULL
+        );
+        "#,
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO sessions
+         (sessionId, cwd, title, status, createdAt, updatedAt, version)
+         VALUES (?1, ?2, ?3, 'active', ?4, ?5, 1)",
+        params![
+            "sess_demo",
+            "/home/user/demo",
+            "DimAgent demo",
+            "2026-11-27T10:00:00.000Z",
+            "2026-11-27T10:01:00.000Z"
+        ],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO session_states
+         (sessionId, selectedProviderId, selectedModelId, version)
+         VALUES ('sess_demo', 'dim', 'dim-model', 1)",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO usage_ledger
+         (ledgerId, sessionId, providerId, modelId, usage, createdAt)
+         VALUES ('usage_1', 'sess_demo', 'dim', 'dim-model', ?1, ?2)",
+        params![
+            r#"{"promptTokens":10,"completionTokens":4,"cacheReadTokens":2}"#,
+            "2026-11-27T10:01:00.000Z"
+        ],
+    )
+    .unwrap();
+    let messages = [
+        (
+            "msg_user",
+            "user",
+            r#"[{"type":"text","text":"Find the needle"}]"#,
+            "01",
+        ),
+        (
+            "msg_assistant",
+            "assistant",
+            r#"[{"type":"thinking","thinking":"I should read the file"},{"type":"text","text":"The needle is in the haystack."},{"type":"tool_use","id":"call_1","name":"read","input":{"path":"/tmp/haystack.txt"}}]"#,
+            "02",
+        ),
+        (
+            "msg_tool",
+            "tool_result",
+            r#"[{"type":"tool_result","tool_use_id":"call_1","content":"needle\n","is_error":false}]"#,
+            "03",
+        ),
+    ];
+    for (id, role, parts, order) in messages {
+        conn.execute(
+            "INSERT INTO messages
+             (messageId, sessionId, role, parts, orderKey, createdAt, updatedAt)
+             VALUES (?1, 'sess_demo', ?2, ?3, ?4, ?5, ?5)",
+            params![id, role, parts, order, "2026-11-27T10:00:30.000Z"],
+        )
+        .unwrap();
+    }
+    drop(conn);
+
+    let roots = vec![Root {
+        source: "dimagent".into(),
+        path: db,
+        format: Format::DimAgent,
+    }];
+    let store = Store::new(Some(tmp.path().join("cairn.sqlite")));
+    let report = build(&store, &roots, None, true).unwrap();
+    assert_eq!(report.sessions, 1);
+    assert_eq!(report.messages, 3);
+    assert_eq!(store.stats().unwrap()["tool_calls"], 1);
+
+    let hits = search(&store, "needle", &SearchOptions::default()).unwrap();
+    assert_eq!(hits["count"], 1);
+    assert_eq!(hits["sessions"][0]["session_id"], "dimagent:sess_demo");
+
+    let shown = show(&store, "dimagent:sess_demo", None, 0, 0, 200, true).unwrap();
+    assert_eq!(shown["count"], 5);
+    let messages = shown["messages"].as_array().unwrap();
+    assert!(messages.iter().any(|message| {
+        message["content_type"] == "tool_use" && message["tool_call"]["name"] == "read"
+    }));
+    assert!(messages
+        .iter()
+        .any(|message| message["content_type"] == "tool_result"));
+    assert!(messages
+        .iter()
+        .any(|message| message["content_type"] == "thinking"));
+
+    let sessions = cairn::query::sessions(
+        &store,
+        &SessionOptions {
+            source: Some("dimagent".into()),
+            limit: 10,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(sessions[0]["model"], "dim-model");
 }
 
 #[test]

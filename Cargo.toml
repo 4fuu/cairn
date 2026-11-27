@@ -1,10 +1,15 @@
 [package]
 name = "cairn"
-version = "0.1.0"
+version = "2026.1127.0"
 edition = "2021"
 rust-version = "1.89"
 description = "A local, read-only index of coding-agent sessions, queried through a CLI and a skill."
 license = "MIT"
+repository = "https://github.com/4fuu/cairn"
+readme = "README.md"
+publish = false
+keywords = ["ai", "agent", "cli", "search", "sqlite"]
+categories = ["command-line-utilities", "development-tools"]
 
 
 [dependencies]
