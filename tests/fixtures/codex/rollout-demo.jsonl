@@ -1,0 +1,10 @@
+{"timestamp":"2026-11-02T09:00:00.000Z","type":"session_meta","payload":{"id":"codex-demo-1","timestamp":"2026-11-02T09:00:00.000Z","cwd":"/home/user/demo2","cli_version":"1.2.3","git":{"branch":"feature/x"}}}
+{"timestamp":"2026-11-02T09:00:01.000Z","type":"turn_context","payload":{"cwd":"/home/user/demo2","model":"gpt-5.1"}}
+{"timestamp":"2026-11-02T09:00:02.000Z","type":"event_msg","payload":{"type":"user_message","message":"Find the failing test in billing"}}
+{"timestamp":"2026-11-02T09:00:02.100Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Find the failing test in billing"}]}}
+{"timestamp":"2026-11-02T09:00:03.000Z","type":"response_item","payload":{"type":"function_call","name":"shell","call_id":"call_1","arguments":"{\"command\":\"pytest tests/billing\",\"workdir\":\"/home/user/demo2\"}"}}
+{"timestamp":"2026-11-02T09:00:04.000Z","type":"response_item","payload":{"type":"function_call_output","call_id":"call_1","output":"FAILED tests/billing/test_invoice.py::test_tax - AssertionError","is_error":false}}
+{"timestamp":"2026-11-02T09:00:05.000Z","type":"event_msg","payload":{"type":"agent_message","message":"The tax test fails because rounding happens twice."}}
+{"timestamp":"2026-11-02T09:00:05.100Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"The tax test fails because rounding happens twice."}]}}
+{"timestamp":"2026-11-02T09:00:06.000Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":300,"output_tokens":50}}}}
+{"timestamp":"2026-11-02T09:00:07.000Z","type":"event_msg","payload":{"type":"thread_name_updated","thread_name":"Billing tax test"}}
