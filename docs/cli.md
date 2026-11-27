@@ -101,7 +101,7 @@ The query is literal. It does not parse `OR`, `NEAR`, or FTS syntax. See [Search
 
 By default, each grouped result includes the session ID, title, project, source, hit count, timestamp, best message UUID, and snippet. The UUID is deliberate: it lets an agent call `show --around <uuid>` without another search. `--detail` adds score, sequence, role, and content type. `--include-meta` changes which message types can match; `--detail` does not.
 
-`--type` and `--tool` are targeted filters. They imply the matching rows, so `--type thinking` works without `--include-meta`; `--type tool` means both `tool_use` and `tool_result`. Use `--tool read` to keep only calls/results for that tool.
+`--type` and `--tool` are targeted filters. They imply the matching rows, so `--type thinking` works without `--include-meta`; `--type tool` means both `tool_use` and `tool_result`. Use `--tool read` to keep only calls/results for that tool. `bash` is the pi `!` shell row; Claude/Codex shell calls usually use `tool_use` with names such as `Bash` or `shell`, so select those with `--tool`.
 
 ## `cairn show`
 

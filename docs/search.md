@@ -36,6 +36,8 @@ cairn show <session-id> --tool read
 
 `--type` is repeatable. `tool` expands to both `tool_use` and `tool_result`. `--tool` matches the tool name case-insensitively and keeps both the call and its result. These filters imply the matching rows, so they do not require `--include-meta`; `--include-meta` remains the "all hidden rows" switch.
 
+`bash` is the normalized pi `!` shell row. Other providers usually represent a shell command as `content_type = 'tool_use'` with a tool name such as `Bash` or `shell`; use `--tool Bash` or `--tool shell` for those.
+
 ## English
 
 English works through both the trigram and word layers:
