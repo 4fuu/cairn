@@ -32,7 +32,7 @@ The installer:
 Use a specific version by passing it as the first argument:
 
 ```sh
-curl --proto '=https' --tlsv1.2 -LsSf https://raw.githubusercontent.com/4fuu/cairn/main/scripts/install.sh | sh -s -- 2026.1127.4
+curl --proto '=https' --tlsv1.2 -LsSf https://raw.githubusercontent.com/4fuu/cairn/main/scripts/install.sh | sh -s -- 2026.1127.5
 ```
 
 Set `CAIRN_INSTALL_DIR` to change the install directory. Add it to `PATH` if the installer reports that it is missing.

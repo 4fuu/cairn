@@ -137,13 +137,15 @@ enum Command {
         #[arg(
             long = "type",
             value_name = "TYPE",
-            help = "filter content type; repeatable (text, thinking, tool_use, tool_result, tool, bash, summary)"
+            value_delimiter = ',',
+            help = "filter content type; repeatable or comma-separated (text, thinking, tool_use, tool_result, tool, bash, summary)"
         )]
         content_type: Vec<String>,
         #[arg(
             long = "tool",
             value_name = "NAME",
-            help = "filter tool calls/results by tool name; repeatable"
+            value_delimiter = ',',
+            help = "filter tool calls/results by tool name; repeatable or comma-separated"
         )]
         tool: Vec<String>,
     },
@@ -162,13 +164,15 @@ enum Command {
         #[arg(
             long = "type",
             value_name = "TYPE",
-            help = "filter content type; repeatable (text, thinking, tool_use, tool_result, tool, bash, summary)"
+            value_delimiter = ',',
+            help = "filter content type; repeatable or comma-separated (text, thinking, tool_use, tool_result, tool, bash, summary)"
         )]
         content_type: Vec<String>,
         #[arg(
             long = "tool",
             value_name = "NAME",
-            help = "filter tool calls/results by tool name; repeatable"
+            value_delimiter = ',',
+            help = "filter tool calls/results by tool name; repeatable or comma-separated"
         )]
         tool: Vec<String>,
     },

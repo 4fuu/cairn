@@ -13,7 +13,7 @@ The original transcripts are never modified.
 
 ## Install
 
-The latest release is [`2026.1127.4`](https://github.com/4fuu/cairn/releases/tag/v2026.1127.4). Versions use the calendar form `YYYY.MDD.REVISION` in `Asia/Hong_Kong`.
+The latest release is [`2026.1127.5`](https://github.com/4fuu/cairn/releases/tag/v2026.1127.5). Versions use the calendar form `YYYY.MDD.REVISION` in `Asia/Hong_Kong`.
 
 Linux x86-64/ARM64 and Apple Silicon macOS:
 
@@ -45,7 +45,7 @@ cairn sql "SELECT source, COUNT(*) FROM sessions GROUP BY source"
 
 The first build reads every configured source root. Later queries refresh incrementally, re-reading only files whose mtime, size, or prefix hash changed.
 
-Output is compact by default: search keeps the best message UUID for `show --around`, `show` keeps visible text, and tool/thinking rows stay out until requested. Use `--format json` for agents, `--detail` for scores/IDs/paths/tokens, `--include-meta` for thinking/tool output, and `--tools` for tool rows. `--type thinking` or `--type tool_result` selects one content type; `--tool read` selects one tool's calls and results.
+Output is compact by default: search keeps the best message UUID for `show --around`, `show` keeps visible text, and tool/thinking rows stay out until requested. Use `--format json` for agents, `--detail` for scores/IDs/paths/tokens, `--include-meta` for thinking/tool output, and `--tools` for tool rows. `--type thinking` or `--type tool_result` selects content types; `--tool read` selects one tool's calls and results. Both accept repeated flags or comma-separated lists, such as `--type tool_use,bash`.
 
 ## Performance
 

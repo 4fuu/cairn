@@ -146,7 +146,7 @@ checksum = "175812e0be2bccb6abe50bb8d566126198344f707e304f45c648fd8f2cc0365e"
 
 [[package]]
 name = "cairn"
-version = "2026.1127.4"
+version = "2026.1127.5"
 dependencies = [
  "anyhow",
  "chrono",

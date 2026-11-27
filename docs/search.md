@@ -29,6 +29,7 @@ Tool-call **arguments** are stored in `tool_calls.input_json` but are not part o
 ```sh
 cairn search "callback" --type tool_result
 cairn search "timeout" --tool bash --all
+cairn show <session-id> --type tool_use,bash
 cairn show <session-id> --type thinking
 cairn show <session-id> --tool read
 ```

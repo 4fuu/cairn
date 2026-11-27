@@ -63,8 +63,10 @@ subcommand: `--db PATH`, `--root SOURCE=PATH`, `--no-refresh`, `--json`,
 
 Use `--type` and `--tool` to target specific hidden rows without pulling all
 meta content: `--type thinking`, `--type tool` (both tool calls and results),
-`--type tool_result`, or `--tool read`. These filters imply the matching rows;
-`--include-meta` remains the "all hidden rows" switch.
+`--type tool_result`, or `--tool read`. Both accept repeated flags or a
+comma-separated list, such as `--type tool_use,bash` or
+`--tool read,bash`. These filters imply the matching rows; `--include-meta`
+remains the "all hidden rows" switch.
 
 ## Sources
 
