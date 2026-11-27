@@ -16,9 +16,19 @@ The original transcripts are never modified.
 
 ## Install
 
+From GitHub:
+
 ```sh
-cargo install --path .
+cargo install --git https://github.com/4fuu/cairn
 cairn --version
+```
+
+Or from a local checkout:
+
+```sh
+git clone https://github.com/4fuu/cairn
+cd cairn
+cargo install --path .
 ```
 
 For development:
