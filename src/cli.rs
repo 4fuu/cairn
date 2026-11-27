@@ -4,30 +4,10 @@ use crate::query::{self, SessionOptions};
 use crate::search::{self, SearchOptions};
 use crate::sqlguard;
 use crate::store::Store;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 use serde_json::{json, Value};
 use std::path::PathBuf;
-
-const SKILL_FILES: &[(&str, &str)] = &[
-    ("SKILL.md", include_str!("../skill/SKILL.md")),
-    (
-        "references/schema.md",
-        include_str!("../skill/references/schema.md"),
-    ),
-    (
-        "references/query-patterns.md",
-        include_str!("../skill/references/query-patterns.md"),
-    ),
-    (
-        "references/retrieval-semantics.md",
-        include_str!("../skill/references/retrieval-semantics.md"),
-    ),
-    (
-        "references/pitfalls.md",
-        include_str!("../skill/references/pitfalls.md"),
-    ),
-];
 
 #[derive(Parser, Debug)]
 #[command(
@@ -140,15 +120,6 @@ enum Command {
         timeout: f64,
     },
     Schema,
-    Skill,
-    Install {
-        #[arg(long, default_value = "amp")]
-        agent: String,
-        #[arg(long)]
-        dest: Option<PathBuf>,
-        #[arg(long)]
-        force: bool,
-    },
 }
 
 pub fn main() {
@@ -169,18 +140,6 @@ pub fn main() {
 fn run() -> Result<()> {
     let cli = Cli::parse();
     match &cli.command {
-        Command::Skill => {
-            let path = skill_dir();
-            if cli.json {
-                println!("{}", serde_json::to_string_pretty(&json!({"path": path}))?);
-            } else {
-                println!("{path}");
-            }
-            return Ok(());
-        }
-        Command::Install { agent, dest, force } => {
-            return install_skill(agent, dest.as_deref(), *force, cli.json);
-        }
         Command::Sources => return print_sources(&cli),
         _ => {}
     }
@@ -729,66 +688,6 @@ fn short(value: Option<&str>, limit: usize) -> String {
     } else {
         format!("{}…", value.chars().take(limit).collect::<String>())
     }
-}
-
-fn skill_dir() -> String {
-    if let Ok(value) = std::env::var("CAIRN_SKILL_DIR") {
-        return value;
-    }
-    let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("skill");
-    if source.is_dir() {
-        source.to_string_lossy().to_string()
-    } else {
-        "embedded (run `cairn install --dest <dir>`)".to_string()
-    }
-}
-
-pub fn install_for_test(destination: &std::path::Path, force: bool) -> Result<()> {
-    install_skill("amp", Some(destination), force, false)
-}
-
-fn install_skill(
-    agent: &str,
-    dest: Option<&std::path::Path>,
-    force: bool,
-    json: bool,
-) -> Result<()> {
-    let destination = match dest {
-        Some(path) => path.to_path_buf(),
-        None => {
-            let home = dirs::home_dir().context("home directory")?;
-            match agent {
-                "amp" => home
-                    .join(".config")
-                    .join("agents")
-                    .join("skills")
-                    .join("cairn"),
-                "claude" => home.join(".claude").join("skills").join("cairn"),
-                "pi" => home.join(".pi").join("agent").join("skills").join("cairn"),
-                "codex" => home.join(".codex").join("skills").join("cairn"),
-                other => anyhow::bail!("unknown agent {other:?}; choose amp, claude, pi, or codex"),
-            }
-        }
-    };
-    if destination.exists() && !force {
-        anyhow::bail!(
-            "{} already exists; pass --force to replace it",
-            destination.display()
-        );
-    }
-    for (relative, content) in SKILL_FILES {
-        let path = destination.join(relative);
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        std::fs::write(&path, content)?;
-    }
-    if json {
-        print_json(&json!({"installed": destination}))?;
-    } else {
-        println!("installed skill to {}", destination.display());
-    }
-    Ok(())
 }
 
 #[allow(dead_code)]

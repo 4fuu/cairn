@@ -386,12 +386,3 @@ fn indexes_dimagent_sqlite() {
     .unwrap();
     assert_eq!(sessions[0]["model"], "dim-model");
 }
-
-#[test]
-fn install_writes_skill_files() {
-    let tmp = tempfile::tempdir().unwrap();
-    let dest = tmp.path().join("skills/cairn");
-    cairn::cli::install_for_test(&dest, true).unwrap();
-    assert!(dest.join("SKILL.md").is_file());
-    assert!(dest.join("references/schema.md").is_file());
-}

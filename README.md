@@ -16,7 +16,7 @@ The original transcripts are never modified.
 
 ## Install
 
-The current release is `2026.1127.1`. Versions use the calendar form
+The current release is `2026.1127.2`. Versions use the calendar form
 `YYYY.MDD.REVISION` in `Asia/Hong_Kong`, matching the release scheme used by
 URI Agent.
 
@@ -57,10 +57,10 @@ cd cairn
 cargo install --path .
 ```
 
-Then install the bundled skill for your agent:
+Install the skill with `npx skills`:
 
 ```sh
-cairn install --agent amp   # or claude, pi, codex
+npx skills add 4fuu/cairn --skill cairn -a amp -g -y
 ```
 
 For development:
@@ -156,22 +156,25 @@ The query is literal. It does not interpret `OR`, `NEAR`, or FTS syntax.
 | `cairn sources` | Configured provider roots |
 | `cairn build [--full] [--source S]` | Force a refresh |
 | `cairn schema` | The actual DDL |
-| `cairn skill` / `cairn install` | Bundled skill path / installer |
 
 `--json` works before or after the subcommand. `--root`, `--db`, `--no-refresh`
 are global too.
 
 ## Install the skill
 
+The skill is installed by [Vercel Labs' `skills` CLI](https://github.com/vercel-labs/skills),
+which owns the per-agent paths:
+
 ```sh
-cairn install --agent amp      # ~/.config/agents/skills/cairn
-cairn install --agent claude   # ~/.claude/skills/cairn
-cairn install --agent pi       # ~/.pi/agent/skills/cairn
-cairn install --agent codex    # ~/.codex/skills/cairn
+npx skills add 4fuu/cairn --skill cairn -a amp -g -y
 ```
 
-The skill lives in [`skill/`](skill). Reload the agent if it does not discover
-the new skill immediately.
+Use `-a claude-code`, `-a codex`, or repeat `-a` to install for several agents.
+Omit `-g` to install into the current project. `npx skills add 4fuu/cairn
+--list` lists the available skill without installing it.
+
+The source lives in [`skills/cairn`](skills/cairn). The CLI no longer installs
+or copies skill files itself.
 
 ## How it works
 
