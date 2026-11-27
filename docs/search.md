@@ -39,11 +39,14 @@ Jieba search-mode tokens cover common two-character words. Three or more charact
 
 ## Result modes
 
-- Default: group by session. Each result has the best hit, a `hits` count, a snippet, and a score.
+- Default: group by session. Each result has the session ID, title, project, source, `hits` count, timestamp, best message UUID, and snippet.
 - `--all`: return individual message hits.
 - `--context N`: attach up to N neighboring messages to the best grouped hit.
 - `--full-text`: return the complete matched message instead of a 280-character snippet.
-- `--json`: return plain text for agents; terminal output highlights exact matches when stdout is a TTY.
+- `--detail`: add score, sequence, role, and content type. It does not change which messages can match.
+- `--json`: return structured output for agents; terminal output highlights exact matches when stdout is a TTY.
+
+The default result includes the best message UUID so an agent can call `show --around` directly instead of issuing another search. Keep that field when changing the default JSON shape.
 
 ## Misses
 

@@ -31,9 +31,10 @@ The release binary is `target/release/cairn`.
 | `src/search.rs` | Search and ranking |
 | `src/query.rs` | Session and message reads |
 | `src/sqlguard.rs` | Read-only SQL |
+| `src/update.rs` | Release check and cached update state |
 | `tests/integration.rs` | End-to-end index/search/show/SQL tests |
 | `tests/fixtures/` | Claude, Codex, and pi fixtures |
-| `skills/cairn/` | Agent skill source |
+| `skills/cairn-session-search/` | Agent skill source |
 | `docs/` | User and maintainer documentation |
 
 ## Add a provider
@@ -50,7 +51,7 @@ The release binary is `target/release/cairn`.
    - `parse_file`
 5. If the source is SQLite-backed, add it to the non-append branch in `src/indexer.rs`.
 6. Add an integration test using a temp database or fixture.
-7. Update [Sources](sources.md) and the source list in [`skills/cairn/SKILL.md`](../skills/cairn/SKILL.md).
+7. Update [Sources](sources.md) and the source list in [`skills/cairn-session-search/SKILL.md`](../skills/cairn-session-search/SKILL.md).
 8. Run `cargo test --locked` and the skill discovery check.
 
 Provider tests should cover text, tool calls, tool results, timestamps, project path, and usage when the format exposes them.

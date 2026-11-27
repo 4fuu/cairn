@@ -50,7 +50,7 @@ The installer verifies the archive against `SHA256SUMS`. Retry the download; if 
 npx skills add 4fuu/cairn --list
 ```
 
-The skill must be under `skills/cairn/SKILL.md`. `npx skills` requires Node.js 22.20 or newer. See [Skill](skill.md).
+The skill must be under `skills/cairn-session-search/SKILL.md`. `npx skills` requires Node.js 22.20 or newer. See [Skill](skill.md).
 
 ## macOS Intel
 
@@ -63,6 +63,16 @@ cargo install --git https://github.com/4fuu/cairn
 ## Windows
 
 Use the Scoop manifest or the x86-64 zip from the release page. The one-line shell installer is for Linux and Apple Silicon macOS.
+
+## Update notices are noisy or blocked
+
+Normal commands check the latest GitHub release at most once every 24 hours. The state is in `~/.cairn/update-check.json`; delete it to force the next check. Disable checks with:
+
+```sh
+cairn --no-update-check status
+```
+
+or set `CAIRN_NO_UPDATE_CHECK=1`. Update notices go to stderr, so they never corrupt JSON output. `cairn version` performs a check unless update checks are disabled.
 
 ## Source sessions are not modified
 

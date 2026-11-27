@@ -32,7 +32,7 @@ The installer:
 Use a specific version by passing it as the first argument:
 
 ```sh
-curl --proto '=https' --tlsv1.2 -LsSf https://raw.githubusercontent.com/4fuu/cairn/main/scripts/install.sh | sh -s -- 2026.1127.2
+curl --proto '=https' --tlsv1.2 -LsSf https://raw.githubusercontent.com/4fuu/cairn/main/scripts/install.sh | sh -s -- 2026.1127.3
 ```
 
 Set `CAIRN_INSTALL_DIR` to change the install directory. Add it to `PATH` if the installer reports that it is missing.
@@ -70,21 +70,21 @@ cargo install --path .
 The skill is distributed separately from the binary and installed by [Vercel Labs' `skills` CLI](https://github.com/vercel-labs/skills). The CLI owns the per-agent directories; Cairn does not copy skill files itself.
 
 ```sh
-npx skills add 4fuu/cairn --skill cairn -a amp -g -y
+npx skills add 4fuu/cairn --skill cairn-session-search -a amp -g -y
 ```
 
 Use `-a claude-code`, `-a codex`, or repeat `-a` for several agents. Omit `-g` to install into the current project. `--copy` copies instead of linking.
 
 ```sh
-npx skills add 4fuu/cairn --skill cairn -a claude-code -a codex -g -y
+npx skills add 4fuu/cairn --skill cairn-session-search -a claude-code -a codex -g -y
 npx skills add 4fuu/cairn --list
 ```
 
 Update or remove the installed skill:
 
 ```sh
-npx skills update cairn -g
-npx skills remove cairn -g -y
+npx skills update cairn-session-search -g
+npx skills remove cairn-session-search -g -y
 ```
 
 See [Skill](skill.md) for the layout and runtime behavior.
@@ -92,9 +92,11 @@ See [Skill](skill.md) for the layout and runtime behavior.
 ## Verify
 
 ```sh
-cairn --version
+cairn version
 cairn status
 ```
+
+`cairn version` prints the current version and checks the latest GitHub release. Normal commands check at most once every 24 hours and print an update notice to stderr; the state lives in `~/.cairn/update-check.json` (or `$CAIRN_HOME/update-check.json`). Disable it with `--no-update-check` or `CAIRN_NO_UPDATE_CHECK=1`.
 
 `cairn status` builds the index on first use. If a source is missing, run `cairn sources` and see [Sources](sources.md).
 
@@ -103,6 +105,6 @@ cairn status
 - One-line installer: remove `~/.local/bin/cairn` and `~/.local/bin/cairn-*`.
 - Homebrew: `brew uninstall cairn`.
 - Scoop: `scoop uninstall cairn`.
-- Skill: `npx skills remove cairn -g -y`.
+- Skill: `npx skills remove cairn-session-search -g -y`.
 
 The index is separate from the binary. Remove `~/.cairn` if you also want to delete the local index.

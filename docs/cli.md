@@ -1,17 +1,33 @@
 # CLI reference
 
-`cairn` opens the local index, refreshes it incrementally, and answers from SQLite. Every command accepts `--json` for agent use.
+`cairn` opens the local index, refreshes it incrementally, and answers from SQLite. The default output is compact human-readable text; `--format json` is the machine-readable form.
 
 ## Global options
 
 | Option | Meaning |
 |---|---|
 | `--db PATH` | Index path. Default: `~/.cairn/cairn.sqlite`, or `$CAIRN_HOME/cairn.sqlite` |
-| `--json` | Print JSON instead of terminal text |
+| `--format text\|json` | Output format. Default: `text` |
+| `--json` | Alias for `--format json` |
+| `--detail` | Add IDs, scores, paths, model, and token fields |
+| `--no-update-check` | Skip the once-a-day release check |
 | `--no-refresh` | Skip the incremental refresh before the command |
 | `--root SOURCE=PATH` | Override a provider root. Repeatable |
 
 Global options work before or after the subcommand.
+
+Default output is intentionally bounded. Search returns the best hit plus a session ID and message UUID; `show` returns visible text; tool output and thinking require `--include-meta` or `--tools`. `--detail` adds the nonessential fields without changing which rows are selected.
+
+## `cairn version`
+
+Print the current version and, when available, the latest release.
+
+```sh
+cairn version
+cairn version --format json
+```
+
+The command checks GitHub unless `--no-update-check` or `CAIRN_NO_UPDATE_CHECK=1` is set. Normal commands check at most once every 24 hours and print an update notice to stderr, never stdout. The check state is stored in `~/.cairn/update-check.json` (or `$CAIRN_HOME/update-check.json`). JSON output suppresses the notice.
 
 ## `cairn build`
 
@@ -81,6 +97,8 @@ cairn search "迁移" --project my-app --context 3
 
 The query is literal. It does not parse `OR`, `NEAR`, or FTS syntax. See [Search](search.md) for ranking and edge cases.
 
+By default, each grouped result includes the session ID, title, project, source, hit count, timestamp, best message UUID, and snippet. The UUID is deliberate: it lets an agent call `show --around <uuid>` without another search. `--detail` adds score, sequence, role, and content type. `--include-meta` changes which message types can match; `--detail` does not.
+
 ## `cairn show`
 
 Read a session timeline or a window around one message.
@@ -98,7 +116,7 @@ cairn show <session-id> --around <uuid> --before 3 --after 3 --tools --json
 | `--limit N` | Default: 200 |
 | `--tools` | Include tool calls/results and meta messages |
 
-Without `--around`, `show` returns the visible text timeline in order.
+Without `--around`, `show` returns the visible text timeline in order. By default, messages contain sequence, role, timestamp, and text. `--tools` adds tool-use/tool-result rows and their payloads; `--detail` adds UUID, content type, model, token counts, and the meta flag. `--detail` does not add tool rows by itself.
 
 ## `cairn sql`
 
@@ -119,10 +137,12 @@ The guard allows only one statement, rejects writes and unsafe PRAGMAs, blocks e
 
 ## `cairn schema`
 
-Print the actual SQLite DDL used by the index. This is the authoritative schema for SQL queries; the agent skill keeps a readable reference in [`skills/cairn/references/schema.md`](../skills/cairn/references/schema.md).
+Print the actual SQLite DDL used by the index. This is the authoritative schema for SQL queries; the agent skill keeps a readable reference in [`skills/cairn-session-search/references/schema.md`](../skills/cairn-session-search/references/schema.md).
 
 ## JSON output
 
 `--json` returns stable objects for scripts and agents. Search returns `sessions[]` or `hits[]`; `show` returns `session` plus `messages[]`; `sql` returns `columns`, `rows`, `truncated`, `row_count`, and `elapsed_ms`.
+
+JSON is compact by default. Session and search objects keep the fields needed to choose the next call; `--detail` restores full session metadata, scores, UUIDs, sequence numbers, roles, content types, model, and token fields. `cairn version --json` returns `version`, `latest`, `update_available`, and `release_url`.
 
 The CLI exits non-zero on invalid input, missing sessions, denied SQL, or index errors. When `--json` is present, errors are printed as `{"ok": false, "error": "..."}`.

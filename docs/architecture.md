@@ -32,6 +32,7 @@ provider transcripts (JSONL / SQLite / JSON)
 | `src/search.rs` | Three-layer search and ranking |
 | `src/query.rs` | Overview, session list, session/message reads |
 | `src/sqlguard.rs` | Read-only SQL policy and execution |
+| `src/update.rs` | Release check, cached update state, version comparison |
 | `src/model.rs` | Normalized session/message/tool records |
 | `src/util.rs` | IDs, timestamps, clipping, text extraction |
 
@@ -54,7 +55,7 @@ Two FTS5 tables shadow `messages`:
 
 Both are external-content FTS5 tables kept in sync by triggers on insert, update, and delete.
 
-`cairn schema` prints the authoritative DDL. The agent skill keeps a readable copy in [`skills/cairn/references/schema.md`](../skills/cairn/references/schema.md).
+`cairn schema` prints the authoritative DDL. The agent skill keeps a readable copy in [`skills/cairn-session-search/references/schema.md`](../skills/cairn-session-search/references/schema.md).
 
 ## Session and message identity
 
@@ -78,6 +79,10 @@ Do not construct a source path from a session ID. `sessions.source_path` is the 
 For append-only JSONL, a file that grew without changing its prefix is treated as an append. Existing message UUIDs are skipped and only new messages are inserted. Rewrites, truncations, and SQLite-backed sources are re-parsed as a whole path.
 
 WAL mode, a busy timeout, and `BEGIN IMMEDIATE` make concurrent CLI invocations safe. There is no daemon and no background watcher; each query refreshes first unless `--no-refresh` is passed.
+
+## Update check
+
+`src/update.rs` queries the GitHub releases API at most once every 24 hours for normal commands. It stores `last_checked`, `latest_version`, and `release_url` in `~/.cairn/update-check.json` (or under `$CAIRN_HOME`). The check is best-effort: a network failure is recorded and never blocks the requested command. JSON output suppresses the stderr notice; `cairn version` performs an explicit check unless disabled.
 
 ## Search path
 

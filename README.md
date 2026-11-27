@@ -13,7 +13,7 @@ The original transcripts are never modified.
 
 ## Install
 
-The latest release is [`2026.1127.2`](https://github.com/4fuu/cairn/releases/tag/v2026.1127.2). Versions use the calendar form `YYYY.MDD.REVISION` in `Asia/Hong_Kong`.
+The latest release is [`2026.1127.3`](https://github.com/4fuu/cairn/releases/tag/v2026.1127.3). Versions use the calendar form `YYYY.MDD.REVISION` in `Asia/Hong_Kong`.
 
 Linux x86-64/ARM64 and Apple Silicon macOS:
 
@@ -26,7 +26,7 @@ Homebrew, Scoop, Cargo, release archives, upgrades, and uninstall steps are in [
 Install the agent skill separately:
 
 ```sh copy Copy Install Skill
-npx skills add 4fuu/cairn --skill cairn -a amp -g -y
+npx skills add 4fuu/cairn --skill cairn-session-search -a amp -g -y
 ```
 
 `npx skills` owns the per-agent paths. Use `-a claude-code`, `-a codex`, or repeat `-a` for several agents. See [Skill](docs/skill.md).
@@ -34,6 +34,7 @@ npx skills add 4fuu/cairn --skill cairn -a amp -g -y
 ## Quick start
 
 ```sh
+cairn version
 cairn build
 cairn status
 cairn overview
@@ -43,6 +44,20 @@ cairn sql "SELECT source, COUNT(*) FROM sessions GROUP BY source"
 ```
 
 The first build reads every configured source root. Later queries refresh incrementally, re-reading only files whose mtime, size, or prefix hash changed.
+
+Output is compact by default: search keeps the best message UUID for `show --around`, `show` keeps visible text, and tool/thinking rows stay out until requested. Use `--format json` for agents, `--detail` for scores/IDs/paths/tokens, `--include-meta` for thinking/tool output, and `--tools` for tool rows.
+
+## Performance
+
+Measured with a release build on a Linux x86-64 machine, warm filesystem cache, and `--no-update-check`:
+
+| Corpus | Operation | Time |
+|---|---|---:|
+| 20,100 messages / 6.4 MB JSONL | Full build | ~3.1 s |
+| Same index | Multi-word English search | ~0.13–0.14 s |
+| Same index | Exact message search | ~0.06 s |
+
+The index is SQLite with FTS5; search uses trigram and jieba word indexes. Times vary with disk, corpus shape, query length, and whether the first build has to parse the source files. Normal queries also run an incremental refresh.
 
 ## Supported agents
 

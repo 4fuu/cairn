@@ -4,10 +4,18 @@ use crate::query::{self, SessionOptions};
 use crate::search::{self, SearchOptions};
 use crate::sqlguard;
 use crate::store::Store;
+use crate::update;
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use serde_json::{json, Value};
 use std::path::PathBuf;
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, ValueEnum)]
+enum OutputFormat {
+    #[default]
+    Text,
+    Json,
+}
 
 #[derive(Parser, Debug)]
 #[command(
@@ -22,8 +30,24 @@ struct Cli {
         help = "index path (default: ~/.cairn/cairn.sqlite)"
     )]
     db: Option<PathBuf>,
-    #[arg(long, global = true, help = "print JSON")]
+    #[arg(
+        long,
+        global = true,
+        value_enum,
+        default_value_t = OutputFormat::Text,
+        help = "output format"
+    )]
+    format: OutputFormat,
+    #[arg(long, global = true, help = "alias for --format json")]
     json: bool,
+    #[arg(
+        long,
+        global = true,
+        help = "include IDs, scores, paths, model, and token fields"
+    )]
+    detail: bool,
+    #[arg(long, global = true, help = "skip the release update check")]
+    no_update_check: bool,
     #[arg(long, global = true, help = "skip the incremental index refresh")]
     no_refresh: bool,
     #[arg(
@@ -35,6 +59,20 @@ struct Cli {
     root: Vec<String>,
     #[command(subcommand)]
     command: Command,
+}
+
+impl Cli {
+    fn output_format(&self) -> OutputFormat {
+        if self.json {
+            OutputFormat::Json
+        } else {
+            self.format
+        }
+    }
+
+    fn update_check_disabled(&self) -> bool {
+        self.no_update_check || std::env::var_os("CAIRN_NO_UPDATE_CHECK").is_some()
+    }
 }
 
 #[derive(Subcommand, Debug)]
@@ -120,11 +158,22 @@ enum Command {
         timeout: f64,
     },
     Schema,
+    Version,
 }
 
 pub fn main() {
+    #[cfg(unix)]
+    unsafe {
+        libc::signal(libc::SIGPIPE, libc::SIG_DFL);
+    }
     if let Err(error) = run() {
-        let wants_json = std::env::args().any(|argument| argument == "--json");
+        let args: Vec<String> = std::env::args().collect();
+        let wants_json = args
+            .iter()
+            .any(|argument| argument == "--json" || argument == "--format=json")
+            || args
+                .windows(2)
+                .any(|window| window[0] == "--format" && window[1] == "json");
         if wants_json {
             println!(
                 "{}",
@@ -139,7 +188,22 @@ pub fn main() {
 
 fn run() -> Result<()> {
     let cli = Cli::parse();
+    if !matches!(&cli.command, Command::Version)
+        && !cli.update_check_disabled()
+        && cli.output_format() != OutputFormat::Json
+    {
+        let status = update::check(false);
+        if status.update_available {
+            eprintln!(
+                "cairn: {} is available (current {})",
+                status.latest.as_deref().unwrap_or("a newer release"),
+                status.current
+            );
+            eprintln!("        {}", status.release_url);
+        }
+    }
     match &cli.command {
+        Command::Version => return print_version(&cli),
         Command::Sources => return print_sources(&cli),
         _ => {}
     }
@@ -154,7 +218,7 @@ fn run() -> Result<()> {
         Command::Status => {
             refresh(&cli, &store)?;
             let stats = store.stats()?;
-            if cli.json {
+            if cli.output_format() == OutputFormat::Json {
                 print_json(&stats)?;
             } else {
                 println!("db:       {}", stats["db"].as_str().unwrap_or("-"));
@@ -205,7 +269,7 @@ fn run() -> Result<()> {
                     }))
                 })?
                 .collect::<rusqlite::Result<Vec<_>>>()?;
-            if cli.json {
+            if cli.output_format() == OutputFormat::Json {
                 print_json(&Value::Array(rows))?;
             } else {
                 for row in rows {
@@ -229,10 +293,10 @@ fn run() -> Result<()> {
                 None => std::env::current_dir()?.to_string_lossy().to_string(),
             };
             let value = query::overview(&store, Some(&cwd_value), project.as_deref(), *limit)?;
-            if cli.json {
-                print_json(&value)?;
+            if cli.output_format() == OutputFormat::Json {
+                print_json(&compact_overview(&value, cli.detail))?;
             } else {
-                print_overview(&value);
+                print_overview(&value, cli.detail);
             }
         }
         Command::Sessions {
@@ -256,10 +320,10 @@ fn run() -> Result<()> {
                     offset: *offset,
                 },
             )?;
-            if cli.json {
-                print_json(&value)?;
+            if cli.output_format() == OutputFormat::Json {
+                print_json(&compact_sessions(&value, cli.detail))?;
             } else {
-                print_sessions(&value);
+                print_sessions(&value, cli.detail);
             }
         }
         Command::Search {
@@ -291,10 +355,10 @@ fn run() -> Result<()> {
                     all: *all,
                 },
             )?;
-            if cli.json {
-                print_json(&value)?;
+            if cli.output_format() == OutputFormat::Json {
+                print_json(&compact_search(&value, *all, cli.detail))?;
             } else {
-                print_search(&value, *all);
+                print_search(&value, *all, cli.detail);
             }
         }
         Command::Show {
@@ -314,10 +378,10 @@ fn run() -> Result<()> {
                 *limit,
                 *tools,
             )?;
-            if cli.json {
-                print_json(&value)?;
+            if cli.output_format() == OutputFormat::Json {
+                print_json(&compact_show(&value, cli.detail, *tools))?;
             } else {
-                print_show(&value);
+                print_show(&value, cli.detail, *tools);
             }
         }
         Command::Sql {
@@ -333,7 +397,7 @@ fn run() -> Result<()> {
                 })
                 .collect();
             let value = sqlguard::run(&store, sql, &params, *max_rows, *timeout)?;
-            if cli.json {
+            if cli.output_format() == OutputFormat::Json {
                 print_json(&value)?;
             } else {
                 print_sql(&value);
@@ -356,7 +420,7 @@ fn run_build(cli: &Cli, store: &Store, full: bool, sources: &[String], quiet: bo
         },
         full,
     )?;
-    if cli.json {
+    if cli.output_format() == OutputFormat::Json {
         print_json(&serde_json::to_value(&report)?)?;
     } else if !quiet {
         println!(
@@ -395,9 +459,193 @@ fn refresh(cli: &Cli, store: &Store) -> Result<()> {
     Ok(())
 }
 
+fn print_version(cli: &Cli) -> Result<()> {
+    let status = if cli.update_check_disabled() {
+        update::cached()
+    } else {
+        update::check(true)
+    };
+    if cli.output_format() == OutputFormat::Json {
+        return print_json(&json!({
+            "version": status.current,
+            "latest": status.latest,
+            "update_available": status.update_available,
+            "release_url": status.release_url,
+        }));
+    }
+    println!("cairn {}", status.current);
+    if let Some(latest) = status.latest {
+        if status.update_available {
+            println!("latest  {latest}");
+            println!("update available: {}", status.release_url);
+        } else if latest == status.current {
+            println!("latest  {latest} (up to date)");
+        } else {
+            println!("latest  {latest} (published)");
+        }
+    }
+    Ok(())
+}
+
 fn print_json(value: &Value) -> Result<()> {
     println!("{}", serde_json::to_string_pretty(value)?);
     Ok(())
+}
+
+fn compact_session(value: &Value, detail: bool) -> Value {
+    if detail {
+        return value.clone();
+    }
+    json!({
+        "id": value["id"],
+        "source": value["source"],
+        "title": value["title"],
+        "project": value["project"],
+        "message_count": value["message_count"],
+        "started_at": value["started_at"],
+        "ended_at": value["ended_at"],
+    })
+}
+
+fn compact_sessions(value: &Value, detail: bool) -> Value {
+    if detail {
+        return value.clone();
+    }
+    Value::Array(
+        value
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|row| compact_session(row, false))
+            .collect(),
+    )
+}
+
+fn compact_search(value: &Value, all: bool, detail: bool) -> Value {
+    if detail {
+        return value.clone();
+    }
+    if all {
+        let hits = value["hits"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|hit| {
+                json!({
+                    "session_id": hit["session_id"],
+                    "session_title": hit["session_title"],
+                    "project": hit["project"],
+                    "source": hit["source"],
+                    "role": hit["role"],
+                    "timestamp": hit["timestamp"],
+                    "uuid": hit["uuid"],
+                    "snippet": hit["snippet"],
+                })
+            })
+            .collect::<Vec<_>>();
+        return json!({"query": value["query"], "count": value["count"], "hits": hits});
+    }
+    let sessions = value["sessions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|session| {
+            let mut out = json!({
+                "session_id": session["session_id"],
+                "session_title": session["session_title"],
+                "project": session["project"],
+                "source": session["source"],
+                "hits": session["hits"],
+                "timestamp": session["timestamp"],
+                "uuid": session["uuid"],
+                "snippet": session["snippet"],
+            });
+            if let Some(context) = session.get("context").and_then(Value::as_array) {
+                out["context"] = Value::Array(
+                    context
+                        .iter()
+                        .map(|row| {
+                            json!({
+                                "seq": row["seq"],
+                                "role": row["role"],
+                                "timestamp": row["timestamp"],
+                                "text": row["text"],
+                            })
+                        })
+                        .collect(),
+                );
+            }
+            out
+        })
+        .collect::<Vec<_>>();
+    json!({"query": value["query"], "count": value["count"], "sessions": sessions})
+}
+
+fn compact_show(value: &Value, detail: bool, tools: bool) -> Value {
+    if detail {
+        return value.clone();
+    }
+    let messages = value["messages"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|message| {
+            let mut out = json!({
+                "seq": message["seq"],
+                "role": message["role"],
+                "timestamp": message["timestamp"],
+                "text": message["text"],
+            });
+            if tools {
+                if let Some(call) = message.get("tool_call") {
+                    out["tool_call"] = call.clone();
+                }
+                if message["is_error"].as_bool().unwrap_or(false) {
+                    out["is_error"] = json!(true);
+                }
+            }
+            out
+        })
+        .collect::<Vec<_>>();
+    json!({
+        "session": compact_session(&value["session"], false),
+        "messages": messages,
+        "count": value["count"],
+        "truncated": value["truncated"],
+    })
+}
+
+fn compact_overview(value: &Value, detail: bool) -> Value {
+    if detail {
+        return value.clone();
+    }
+    let mut out = json!({"totals": value["totals"], "current_project": null});
+    if let Some(current) = value
+        .get("current_project")
+        .filter(|value| !value.is_null())
+    {
+        out["current_project"] = json!({
+            "project": current["project"],
+            "sessions": current["sessions"],
+            "recent": current["recent"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|row| compact_session(row, false))
+                .collect::<Vec<_>>(),
+        });
+    }
+    out["projects"] = value["projects"].clone();
+    out["recent"] = Value::Array(
+        value["recent"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|row| compact_session(row, false))
+            .collect(),
+    );
+    out["sources"] = value["sources"].clone();
+    out
 }
 
 fn print_sources(cli: &Cli) -> Result<()> {
@@ -422,7 +670,7 @@ fn print_sources(cli: &Cli) -> Result<()> {
             "files": files,
         }));
     }
-    if cli.json {
+    if cli.output_format() == OutputFormat::Json {
         print_json(&Value::Array(values))?;
     } else {
         println!("{:<12} {:>6}  path", "source", "files");
@@ -443,7 +691,7 @@ fn print_sources(cli: &Cli) -> Result<()> {
     Ok(())
 }
 
-fn print_overview(value: &Value) {
+fn print_overview(value: &Value, detail: bool) {
     let totals = &value["totals"];
     println!(
         "{} sessions · {} messages · {} tool calls · {} projects",
@@ -458,6 +706,11 @@ fn print_overview(value: &Value) {
             current["project"].as_str().unwrap_or("-"),
             current["sessions"]
         );
+        if detail {
+            if let Some(path) = current["project_path"].as_str() {
+                println!("  path: {path}");
+            }
+        }
         for session in current["recent"].as_array().into_iter().flatten().take(5) {
             println!(
                 "  {}  [{}]  {}",
@@ -494,17 +747,38 @@ fn print_overview(value: &Value) {
                     .or(session["started_at"].as_str())
                     .unwrap_or("")
             );
+            if detail {
+                if let Some(model) = session["model"].as_str() {
+                    println!("    model: {model}");
+                }
+                if let Some(path) = session["project_path"].as_str() {
+                    println!("    path: {path}");
+                }
+            }
+        }
+    }
+    if detail {
+        if let Some(sources) = value["sources"].as_array().filter(|rows| !rows.is_empty()) {
+            println!("\nsources");
+            for source in sources {
+                println!(
+                    "  {:<12} {:>5} sessions  {:>6} messages",
+                    source["source"].as_str().unwrap_or("-"),
+                    source["sessions"],
+                    source["messages"]
+                );
+            }
         }
     }
 }
 
-fn print_sessions(value: &Value) {
+fn print_sessions(value: &Value, detail: bool) {
     let Some(rows) = value.as_array() else { return };
     if rows.is_empty() {
         println!("(no sessions)");
         return;
     }
-    println!("{:<14} {:<10} {:<20} title", "id", "source", "when");
+    println!("{:<19} {:<8} {:<30} title", "when", "source", "session");
     for row in rows {
         let when = row["ended_at"]
             .as_str()
@@ -514,16 +788,27 @@ fn print_sessions(value: &Value) {
             .unwrap_or("")
             .replace('T', " ");
         println!(
-            "{:<40} {:<10} {:<20} {}",
-            row["id"].as_str().unwrap_or("-"),
-            row["source"].as_str().unwrap_or("-"),
+            "{:<19} {:<8} {:<30} {}",
             when,
+            row["source"].as_str().unwrap_or("-"),
+            short(row["id"].as_str(), 30),
             short(row["title"].as_str(), 70)
         );
+        if detail {
+            if let Some(model) = row["model"].as_str() {
+                println!("    model: {model}");
+            }
+            if let Some(path) = row["project_path"].as_str() {
+                println!("    path: {path}");
+            }
+            if let Some(summary) = row["summary"].as_str() {
+                println!("    summary: {summary}");
+            }
+        }
     }
 }
 
-fn print_search(value: &Value, all: bool) {
+fn print_search(value: &Value, all: bool, detail: bool) {
     if all {
         let hits = value["hits"].as_array().cloned().unwrap_or_default();
         println!(
@@ -546,6 +831,15 @@ fn print_search(value: &Value, all: bool) {
                     value["query"].as_str().unwrap_or("")
                 )
             );
+            if detail {
+                println!(
+                    "  uuid: {}  score: {:.3}  seq: {}  type: {}",
+                    hit["uuid"].as_str().unwrap_or("-"),
+                    hit["score"].as_f64().unwrap_or(0.0),
+                    hit["seq"],
+                    hit["content_type"].as_str().unwrap_or("-")
+                );
+            }
         }
         return;
     }
@@ -570,6 +864,16 @@ fn print_search(value: &Value, all: bool) {
                 value["query"].as_str().unwrap_or("")
             )
         );
+        if detail {
+            println!(
+                "  uuid: {}  score: {:.3}  seq: {}  role: {}  type: {}",
+                session["uuid"].as_str().unwrap_or("-"),
+                session["score"].as_f64().unwrap_or(0.0),
+                session["seq"],
+                session["role"].as_str().unwrap_or("-"),
+                session["content_type"].as_str().unwrap_or("-")
+            );
+        }
         if let Some(context) = session.get("context").and_then(Value::as_array) {
             for row in context {
                 println!(
@@ -586,7 +890,7 @@ fn print_search(value: &Value, all: bool) {
     }
 }
 
-fn print_show(value: &Value) {
+fn print_show(value: &Value, detail: bool, tools: bool) {
     let session = &value["session"];
     println!(
         "{}",
@@ -602,6 +906,14 @@ fn print_show(value: &Value) {
         session["started_at"].as_str().unwrap_or(""),
         session["ended_at"].as_str().unwrap_or("")
     );
+    if detail {
+        println!(
+            "messages: {} · model: {} · path: {}",
+            session["message_count"],
+            session["model"].as_str().unwrap_or("-"),
+            session["project_path"].as_str().unwrap_or("-")
+        );
+    }
     for message in value["messages"].as_array().into_iter().flatten() {
         let stamp = message["timestamp"].as_str().unwrap_or("");
         println!(
@@ -611,21 +923,37 @@ fn print_show(value: &Value) {
             stamp.get(11..19).unwrap_or(""),
             message["content_type"].as_str().unwrap_or("-")
         );
+        if detail {
+            println!(
+                "  uuid: {} · model: {} · tokens: {}/{}{}",
+                message["uuid"].as_str().unwrap_or("-"),
+                message["model"].as_str().unwrap_or("-"),
+                token_label(&message["input_tokens"]),
+                token_label(&message["output_tokens"]),
+                if message["is_meta"].as_bool().unwrap_or(false) {
+                    " · meta"
+                } else {
+                    ""
+                }
+            );
+        }
         if let Some(text) = message["text"].as_str() {
             for line in text.lines() {
                 println!("  {line}");
             }
         }
-        if let Some(call) = message.get("tool_call") {
-            let input = call["input"].to_string();
-            println!(
-                "  ↳ {} {}",
-                call["name"].as_str().unwrap_or("-"),
-                short(Some(&input), 300)
-            );
-        }
-        if message["is_error"].as_bool().unwrap_or(false) {
-            println!("  (error)");
+        if tools {
+            if let Some(call) = message.get("tool_call") {
+                let input = call["input"].to_string();
+                println!(
+                    "  ↳ {} {}",
+                    call["name"].as_str().unwrap_or("-"),
+                    short(Some(&input), 300)
+                );
+            }
+            if message["is_error"].as_bool().unwrap_or(false) {
+                println!("  (error)");
+            }
         }
     }
 }
@@ -667,6 +995,13 @@ fn print_sql(value: &Value) {
     if value["truncated"].as_bool().unwrap_or(false) {
         println!("\n(truncated at {} rows)", value["row_count"]);
     }
+}
+
+fn token_label(value: &Value) -> String {
+    value
+        .as_i64()
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "-".to_string())
 }
 
 fn highlight(text: &str, query: &str) -> String {

@@ -6,4 +6,5 @@ pub mod query;
 pub mod search;
 pub mod sqlguard;
 pub mod store;
+pub mod update;
 pub mod util;

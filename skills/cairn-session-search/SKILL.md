@@ -1,20 +1,16 @@
 ---
-name: cairn
+name: cairn-session-search
 description: >
-  Search local coding-agent history across Claude Code, Qoder, Codex, pi/omp,
-  DeepSeek Harness, OpenCode/ZCode, Cline, Grok Build, WorkBuddy, Droid, Kimi,
-  Devin, MiniMax, Hermes, Antigravity, LiveAgent and DimAgent, indexed in one
-  read-only SQLite database. Reactive when the user asks "how did I fix X",
-  "what did we decide", "find the session where", "上次怎么修的", "之前那个 session",
-  "继续之前的", or references work you lack context for. Proactive when the user
-  references past work, a file with complex edit history, a past failure, or asks
-  you to continue where something left off.
+  Use Cairn, a local read-only CLI, to search coding-agent session history.
+  Call it when the user asks what happened before, how a bug was fixed, what was
+  decided, where a change came from, or wants to continue prior work, and when
+  you need evidence from a past session rather than guessing.
 allowed-tools:
   - Read
   - Bash(cairn *)
 ---
 
-# cairn
+# cairn-session-search
 
 Retrieve local coding-agent history through the installed `cairn` CLI. The CLI
 refreshes its index before each query, then answers from a single SQLite

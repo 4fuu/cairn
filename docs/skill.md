@@ -7,16 +7,16 @@ Cairn's agent skill teaches an agent when to search local history, how to narrow
 Use [Vercel Labs' `skills` CLI](https://github.com/vercel-labs/skills):
 
 ```sh
-npx skills add 4fuu/cairn --skill cairn -a amp -g -y
+npx skills add 4fuu/cairn --skill cairn-session-search -a amp -g -y
 ```
 
 The CLI owns the per-agent directories. Omit `-g` to install into the current project. Use `-a claude-code`, `-a codex`, or repeat `-a` for multiple agents.
 
 ```sh
-npx skills add 4fuu/cairn --skill cairn -a claude-code -a codex -g -y
+npx skills add 4fuu/cairn --skill cairn-session-search -a claude-code -a codex -g -y
 npx skills add 4fuu/cairn --list
-npx skills update cairn -g
-npx skills remove cairn -g -y
+npx skills update cairn-session-search -g
+npx skills remove cairn-session-search -g -y
 ```
 
 Cairn no longer has a `cairn install` or `cairn skill` command, and it does not copy skill files itself.
@@ -24,7 +24,7 @@ Cairn no longer has a `cairn install` or `cairn skill` command, and it does not 
 ## Layout
 
 ```text
-skills/cairn/
+skills/cairn-session-search/
   SKILL.md
   references/
     schema.md
@@ -33,7 +33,7 @@ skills/cairn/
     pitfalls.md
 ```
 
-`npx skills` discovers `skills/cairn/SKILL.md` and copies or links the whole directory, including `references/`.
+`npx skills` discovers `skills/cairn-session-search/SKILL.md` and copies or links the whole directory, including `references/`.
 
 ## Runtime workflow
 

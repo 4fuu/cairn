@@ -23,6 +23,6 @@ The [README](../README.md) is the entry point. This directory owns the details.
 - `docs/search.md` owns search semantics.
 - `docs/architecture.md` owns the data model and indexing/query design.
 - `docs/release.md` owns versioning and the release checklist.
-- `skills/cairn/` owns the instructions an agent loads at runtime.
+- `skills/cairn-session-search/` owns the instructions an agent loads at runtime.
 
 When behavior changes, update the document that owns it and only adjust summaries elsewhere.
