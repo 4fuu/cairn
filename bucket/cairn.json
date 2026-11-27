@@ -1,12 +1,12 @@
 {
-    "version": "2026.1127.4",
+    "version": "2026.1127.5",
     "description": "Local, read-only index of coding-agent sessions",
     "homepage": "https://github.com/4fuu/cairn",
     "license": "MIT",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/4fuu/cairn/releases/download/v2026.1127.4/cairn-2026.1127.4-x86_64-pc-windows-msvc.zip",
-            "hash": "30555681cfb9885ed931a86ce73ad59d22373730bcb1a12a167ae07d5b246589"
+            "url": "https://github.com/4fuu/cairn/releases/download/v2026.1127.5/cairn-2026.1127.5-x86_64-pc-windows-msvc.zip",
+            "hash": "083aeb38e76cf5234561611cf317a72ce9be0df6ddecd0f62a96d2d412aa593e"
         }
     },
     "bin": "cairn.exe",
